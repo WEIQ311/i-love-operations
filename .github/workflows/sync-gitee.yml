@@ -74,6 +74,9 @@ jobs:
               echo "应用提交: $COMMIT"
               # 检查提交ID是否有效
               if git cat-file -e $COMMIT 2>/dev/null; then
+                # 先清理可能存在的临时目录
+                rm -rf workflow_backup
+                
                 # 执行cherry-pick，处理各种可能情况
                 git cherry-pick $COMMIT -X theirs --allow-empty
                 CHERRY_PICK_STATUS=$?
@@ -81,8 +84,12 @@ jobs:
                 if [[ $CHERRY_PICK_STATUS -ne 0 ]]; then
                   echo "检测到问题，尝试解决..."
                   
-                  # 检查是否是空提交
-                  if git diff --cached --quiet && git diff --quiet; then
+                  # 处理空提交情况
+                  if git status | grep -q "cherry-pick is now empty"; then
+                    echo "当前cherry-pick为空提交，跳过..."
+                    git cherry-pick --skip
+                  # 检查是否是空提交（另一种方式）
+                  elif git diff --cached --quiet && git diff --quiet; then
                     echo "当前cherry-pick为空提交，跳过..."
                     git cherry-pick --skip
                   else
@@ -95,19 +102,25 @@ jobs:
               else
                 echo "跳过无效的提交ID: $COMMIT"
               fi
+              
+              # 再次清理临时目录，确保不会残留
+              rm -rf workflow_backup
             done
           else
             echo "没有检测到差异提交，不需要同步"
           fi
           
-          # 恢复GitHub上的工作流文件
-          echo "恢复GitHub上的工作流文件"
+          # 重新创建临时目录并恢复GitHub上的工作流文件
+          mkdir -p workflow_backup
           cp -r workflow_backup/* .github/workflows/ || true
           rm -rf workflow_backup
           
           # 添加工作流文件的变更
           git add .github/workflows/
           git commit -m "Preserve GitHub workflow files" || true
+          
+          # 最终清理，确保没有临时目录残留
+          rm -rf workflow_backup
           
           echo "===== 同步Gitee代码完成（保留完整提交历史）====="
 
