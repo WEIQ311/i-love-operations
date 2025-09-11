@@ -1,8 +1,8 @@
-name: Sync from Gitee
+name: 从Gitee同步到GitHub
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每天UTC时间0点执行，可根据需要调整cron表达式
+    - cron: '0 * * * *'  # 每天每小时UTC时间整点执行，可根据需要调整cron表达式
   workflow_dispatch:  # 允许手动触发
 
 jobs:
