@@ -78,34 +78,34 @@ jobs:
                 rm -rf workflow_backup
                 
                 # 执行cherry-pick，使用更可靠的错误处理机制
-              echo "尝试cherry-pick提交: $COMMIT"
-              
-              # 执行cherry-pick并捕获输出和状态
-              CHERRY_PICK_OUTPUT=$(git cherry-pick $COMMIT -X theirs --allow-empty 2>&1)
-              CHERRY_PICK_STATUS=$?
-              
-              if [[ $CHERRY_PICK_STATUS -ne 0 ]]; then
-                echo "Cherry-pick失败，状态码: $CHERRY_PICK_STATUS"
-                echo "输出信息: $CHERRY_PICK_OUTPUT"
+                echo "尝试cherry-pick提交: $COMMIT"
                 
-                # 检查是否为空提交
-                if echo "$CHERRY_PICK_OUTPUT" | grep -q "cherry-pick is now empty" || git status | grep -q "cherry-pick is now empty"; then
-                  echo "检测到空提交，正在跳过..."
-                  git cherry-pick --skip || true
-                # 检查是否有冲突
-                elif echo "$CHERRY_PICK_OUTPUT" | grep -q "CONFLICT" || git status | grep -q "Unmerged paths"; then
-                  echo "检测到冲突，尝试解决..."
-                  git add .
-                  git cherry-pick --continue || git cherry-pick --skip
-                # 检查工作树是否干净（另一种空提交情况）
-                elif git diff --cached --quiet && git diff --quiet; then
-                  echo "工作树干净，视为空提交，跳过..."
-                  git cherry-pick --skip || true
-                else
-                  echo "其他错误情况，尝试跳过..."
-                  git cherry-pick --skip || true
+                # 执行cherry-pick并捕获输出和状态
+                CHERRY_PICK_OUTPUT=$(git cherry-pick $COMMIT -X theirs --allow-empty 2>&1)
+                CHERRY_PICK_STATUS=$?
+                
+                if [[ $CHERRY_PICK_STATUS -ne 0 ]]; then
+                  echo "Cherry-pick失败，状态码: $CHERRY_PICK_STATUS"
+                  echo "输出信息: $CHERRY_PICK_OUTPUT"
+                  
+                  # 检查是否为空提交
+                  if echo "$CHERRY_PICK_OUTPUT" | grep -q "cherry-pick is now empty" || git status | grep -q "cherry-pick is now empty"; then
+                    echo "检测到空提交，正在跳过..."
+                    git cherry-pick --skip || true
+                  # 检查是否有冲突
+                  elif echo "$CHERRY_PICK_OUTPUT" | grep -q "CONFLICT" || git status | grep -q "Unmerged paths"; then
+                    echo "检测到冲突，尝试解决..."
+                    git add .
+                    git cherry-pick --continue || git cherry-pick --skip
+                  # 检查工作树是否干净（另一种空提交情况）
+                  elif git diff --cached --quiet && git diff --quiet; then
+                    echo "工作树干净，视为空提交，跳过..."
+                    git cherry-pick --skip || true
+                  else
+                    echo "其他错误情况，尝试跳过..."
+                    git cherry-pick --skip || true
+                  fi
                 fi
-              fi
               else
                 echo "跳过无效的提交ID: $COMMIT"
               fi
@@ -117,10 +117,15 @@ jobs:
             echo "没有检测到差异提交，不需要同步"
           fi
           
-          # 重新创建临时目录并恢复GitHub上的工作流文件
-          mkdir -p workflow_backup
-          cp -r workflow_backup/* .github/workflows/ || true
-          rm -rf workflow_backup
+          # 由于在循环中已经清理了workflow_backup目录，我们需要特殊处理工作流文件恢复
+          echo "特殊处理工作流文件，确保GitHub上的工作流文件不受影响"
+          
+          # 检查是否有本地修改的工作流文件
+          if git status .github/workflows/ --porcelain | grep -q "^ M"; then
+            echo "检测到工作流文件有修改，需要特殊处理"
+            # 尝试使用git checkout恢复工作流文件（如果有修改）
+            git checkout -- .github/workflows/ || true
+          fi
           
           # 添加工作流文件的变更
           git add .github/workflows/
