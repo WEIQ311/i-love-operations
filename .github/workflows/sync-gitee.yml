@@ -77,28 +77,35 @@ jobs:
                 # 先清理可能存在的临时目录
                 rm -rf workflow_backup
                 
-                # 执行cherry-pick，处理各种可能情况
-                git cherry-pick $COMMIT -X theirs --allow-empty
-                CHERRY_PICK_STATUS=$?
+                # 执行cherry-pick，使用更可靠的错误处理机制
+              echo "尝试cherry-pick提交: $COMMIT"
+              
+              # 执行cherry-pick并捕获输出和状态
+              CHERRY_PICK_OUTPUT=$(git cherry-pick $COMMIT -X theirs --allow-empty 2>&1)
+              CHERRY_PICK_STATUS=$?
+              
+              if [[ $CHERRY_PICK_STATUS -ne 0 ]]; then
+                echo "Cherry-pick失败，状态码: $CHERRY_PICK_STATUS"
+                echo "输出信息: $CHERRY_PICK_OUTPUT"
                 
-                if [[ $CHERRY_PICK_STATUS -ne 0 ]]; then
-                  echo "检测到问题，尝试解决..."
-                  
-                  # 处理空提交情况
-                  if git status | grep -q "cherry-pick is now empty"; then
-                    echo "当前cherry-pick为空提交，跳过..."
-                    git cherry-pick --skip
-                  # 检查是否是空提交（另一种方式）
-                  elif git diff --cached --quiet && git diff --quiet; then
-                    echo "当前cherry-pick为空提交，跳过..."
-                    git cherry-pick --skip
-                  else
-                    # 尝试解决冲突
-                    echo "尝试自动解决冲突..."
-                    git add .
-                    git cherry-pick --continue || git cherry-pick --skip
-                  fi
+                # 检查是否为空提交
+                if echo "$CHERRY_PICK_OUTPUT" | grep -q "cherry-pick is now empty" || git status | grep -q "cherry-pick is now empty"; then
+                  echo "检测到空提交，正在跳过..."
+                  git cherry-pick --skip || true
+                # 检查是否有冲突
+                elif echo "$CHERRY_PICK_OUTPUT" | grep -q "CONFLICT" || git status | grep -q "Unmerged paths"; then
+                  echo "检测到冲突，尝试解决..."
+                  git add .
+                  git cherry-pick --continue || git cherry-pick --skip
+                # 检查工作树是否干净（另一种空提交情况）
+                elif git diff --cached --quiet && git diff --quiet; then
+                  echo "工作树干净，视为空提交，跳过..."
+                  git cherry-pick --skip || true
+                else
+                  echo "其他错误情况，尝试跳过..."
+                  git cherry-pick --skip || true
                 fi
+              fi
               else
                 echo "跳过无效的提交ID: $COMMIT"
               fi
