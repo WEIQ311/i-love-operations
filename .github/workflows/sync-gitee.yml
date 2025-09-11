@@ -41,7 +41,7 @@ jobs:
           # 显示当前的远程仓库配置
           git remote -v
 
-      - name: 同步Gitee代码（不包括工作流文件）
+      - name: 同步Gitee代码（保留原始提交历史）
         run: |
           echo "===== 开始同步Gitee代码 ====="
           echo "当前工作目录: $(pwd)"
@@ -51,53 +51,46 @@ jobs:
           echo "Gitee master分支的最新提交信息:"
           git log -n 1 gitee/master --oneline
           
-          echo "创建临时目录用于同步操作"
-          mkdir -p temp_gitee
-          echo "临时目录已创建: $(ls -la temp_gitee)"
+          # 创建临时分支用于处理同步
+          echo "创建临时分支用于同步操作"
+          git checkout -b temp-sync-branch
           
-          echo "检出Gitee代码到临时目录"
-          git --work-tree=./temp_gitee checkout gitee/master -- .
-          echo "检出后的临时目录内容:"
-          ls -la temp_gitee
+          # 尝试使用merge保留Gitee提交历史
+          echo "尝试合并Gitee master分支的代码（保留原始提交历史）"
+          git merge gitee/master --allow-unrelated-histories -m "Merge Gitee master into temp branch"
           
-          echo "移除临时目录中的工作流文件"
-          rm -rf ./temp_gitee/${{ env.EXCLUDE_DIRS }}
-          echo "移除工作流文件后的目录内容:"
-          ls -la temp_gitee
+          # 移除工作流文件以避免权限问题
+          echo "移除工作流文件以避免权限问题"
+          rm -rf ${{ env.EXCLUDE_DIRS }}
           
-          echo "将临时目录中的文件复制到当前工作目录"
-          echo "复制前的当前目录状态:"
-          git status
+          # 添加变更并提交
+          echo "添加变更并提交"
+          git add .
+          git commit -m "Remove workflow files before syncing to GitHub" || true
           
-          # 先创建必要的目录结构
-          find ./temp_gitee -type d -exec mkdir -p ./{} \;
-          # 再复制所有文件
-          find ./temp_gitee -type f | while read -r file; do
-            target_file="./${file#./temp_gitee/}"
-            echo "复制文件: $file -> $target_file"
-            cp "$file" "$target_file"
-          done
+          # 切换回master分支并合并临时分支
+          echo "切换回master分支"
+          git checkout master
           
-          echo "复制后的当前目录状态:"
-          git status
+          echo "合并临时分支到master"
+          git merge temp-sync-branch -m "Sync code from Gitee with original commit history"
           
-          echo "清理临时目录"
-          rm -rf temp_gitee
+          # 清理临时分支
+          echo "清理临时分支"
+          git branch -D temp-sync-branch
           
-          echo "===== 同步Gitee代码完成 ====="
+          echo "===== 同步Gitee代码完成（保留原始提交历史）====="
 
-      - name: 提交并推送更改
+      - name: 推送更改到GitHub
         run: |
           echo "检查是否有更改需要提交"
-          if [[ -n "$(git status --porcelain)" ]]; then
-            echo "有更改，准备提交"
-            git add .
-            git commit -m "Sync from Gitee (excluding workflows)" || true
+          if git log --oneline HEAD^..HEAD | grep -q "Sync code from Gitee"; then
+            echo "有新的同步提交，准备推送到GitHub"
             
             echo "推送到GitHub仓库（不使用force模式）"
             git push https://${{ secrets.GITHUB_TOKEN }}@github.com/WEIQ311/i-love-operations.git master
           else
-            echo "没有检测到更改，跳过提交和推送"
+            echo "没有检测到新的同步提交，跳过推送"
           fi
           
           echo "操作完成，显示最终状态"
