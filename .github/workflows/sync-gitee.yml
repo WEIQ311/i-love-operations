@@ -56,7 +56,9 @@ jobs:
           rm -rf ./temp_gitee/${{ env.EXCLUDE_DIRS }}
           
           echo "将临时目录中的文件复制到当前工作目录"
-          rsync -av --delete ./temp_gitee/ ./
+          # 使用cp命令代替rsync，更简单且避免消失文件警告
+          find ./temp_gitee -type f -exec cp --parents {} ./ \;
+          find ./temp_gitee -type d -exec mkdir -p ./{} \;
           
           echo "清理临时目录"
           rm -rf temp_gitee
