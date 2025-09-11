@@ -64,8 +64,23 @@ jobs:
           echo "获取需要同步的差异提交列表"
           git fetch --all
           
-          # 使用正确的方式获取差异提交，避免提交ID格式错误
+          # 显示当前分支状态和远程分支信息，用于调试
+          echo "显示当前分支状态："
+          git branch -av
+          
+          # 修复：调整git rev-list命令的参数顺序，确保正确获取差异
+          echo "比较master和gitee/master分支差异..."
+          # 方法1：尝试直接比较两个分支
           DIFF_COMMITS=$(git rev-list --reverse master..gitee/master)
+          echo "方法1获取的差异提交数量：$(echo "$DIFF_COMMITS" | wc -l)"
+          
+          # 如果方法1没有获取到差异，尝试使用方法2
+          if [[ -z "$DIFF_COMMITS" ]]; then
+            echo "尝试使用替代方法获取差异..."
+            # 方法2：使用git cherry命令获取尚未应用的提交
+            DIFF_COMMITS=$(git cherry master gitee/master | grep '^+' | awk '{print $2}' | tac)
+            echo "方法2获取的差异提交数量：$(echo "$DIFF_COMMITS" | wc -l)"
+          fi
           
           if [[ -n "$DIFF_COMMITS" ]]; then
             echo "开始逐个应用Gitee的提交（保留原始作者信息）"
@@ -123,6 +138,9 @@ jobs:
             done
           else
             echo "没有检测到差异提交，不需要同步"
+            # 添加调试信息，帮助诊断问题
+            echo "详细分支信息："
+            git log --oneline --decorate --graph --all -n 10
           fi
           
           # 由于在循环中已经清理了workflow_backup目录，我们需要特殊处理工作流文件恢复
