@@ -1,0 +1,31 @@
+name: Sync from Gitee
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天UTC时间0点执行，可根据需要调整cron表达式
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  sync:
+    runs-on: i-love-operations-latest
+    steps:
+      - name: Checkout GitHub repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'WEIQ311'
+          git config --global user.email 'weiqiang_6@126.com'
+
+      - name: Add Gitee remote
+        run: git remote add gitee https://gitee.com/wei311525/i-love-operations.git
+
+      - name: Pull from Gitee
+        run: |
+          git pull gitee master --allow-unrelated-histories  
+
+      - name: Push to GitHub
+        run: git push origin master
