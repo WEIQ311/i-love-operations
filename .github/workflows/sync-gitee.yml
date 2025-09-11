@@ -48,7 +48,7 @@ jobs:
           
           # 确保没有残留的workflow_backup目录
           echo "清理可能残留的临时目录"
-          rm -rf workflow_backup
+          rm -rf workflow_backup || true
           
           echo "获取Gitee仓库的最新代码信息"
           git fetch gitee --prune
@@ -75,10 +75,13 @@ jobs:
               # 检查提交ID是否有效
               if git cat-file -e $COMMIT 2>/dev/null; then
                 # 先清理可能存在的临时目录
-                rm -rf workflow_backup
+                rm -rf workflow_backup || true
                 
                 # 执行cherry-pick，使用更可靠的错误处理机制
                 echo "尝试cherry-pick提交: $COMMIT"
+                
+                # 临时禁用错误退出，确保单个提交失败不会中断整个工作流
+                set +e
                 
                 # 执行cherry-pick并捕获输出和状态
                 CHERRY_PICK_OUTPUT=$(git cherry-pick $COMMIT -X theirs --allow-empty 2>&1)
@@ -96,7 +99,7 @@ jobs:
                   elif echo "$CHERRY_PICK_OUTPUT" | grep -q "CONFLICT" || git status | grep -q "Unmerged paths"; then
                     echo "检测到冲突，尝试解决..."
                     git add .
-                    git cherry-pick --continue || git cherry-pick --skip
+                    git cherry-pick --continue || git cherry-pick --skip || true
                   # 检查工作树是否干净（另一种空提交情况）
                   elif git diff --cached --quiet && git diff --quiet; then
                     echo "工作树干净，视为空提交，跳过..."
@@ -104,14 +107,19 @@ jobs:
                   else
                     echo "其他错误情况，尝试跳过..."
                     git cherry-pick --skip || true
+                    # 如果跳过失败，尝试中止cherry-pick
+                    git cherry-pick --abort || true
                   fi
                 fi
+                
+                # 恢复错误退出设置
+                set -e
               else
                 echo "跳过无效的提交ID: $COMMIT"
               fi
               
               # 再次清理临时目录，确保不会残留
-              rm -rf workflow_backup
+              rm -rf workflow_backup || true
             done
           else
             echo "没有检测到差异提交，不需要同步"
@@ -132,7 +140,7 @@ jobs:
           git commit -m "Preserve GitHub workflow files" || true
           
           # 最终清理，确保没有临时目录残留
-          rm -rf workflow_backup
+          rm -rf workflow_backup || true
           
           echo "===== 同步Gitee代码完成（保留完整提交历史）====="
 
