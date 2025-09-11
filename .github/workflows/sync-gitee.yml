@@ -18,7 +18,7 @@ jobs:
       - name: Configure Git
         run: |
           git config --global user.name 'WEIQ311'
-          git config --global user.email '1107437082@qq.com'
+          git config --global user.email 'weiqiang_6@126.com'
 
       - name: Add Gitee remote
         run: git remote add gitee https://gitee.com/wei311525/i-love-operations.git
