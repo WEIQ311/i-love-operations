@@ -46,6 +46,10 @@ jobs:
           echo "===== 开始同步Gitee代码 ====="
           echo "当前工作目录: $(pwd)"
           
+          # 确保没有残留的workflow_backup目录
+          echo "清理可能残留的临时目录"
+          rm -rf workflow_backup
+          
           echo "获取Gitee仓库的最新代码信息"
           git fetch gitee --prune
           echo "Gitee master分支的最新提交信息:"
@@ -56,7 +60,7 @@ jobs:
           mkdir -p workflow_backup
           cp -r .github/workflows/* workflow_backup/ || true
           
-          # 获取Gitee和GitHub之间的差异提交（修复提交ID格式）
+          # 获取Gitee和GitHub之间的差异提交
           echo "获取需要同步的差异提交列表"
           git fetch --all
           
@@ -70,12 +74,23 @@ jobs:
               echo "应用提交: $COMMIT"
               # 检查提交ID是否有效
               if git cat-file -e $COMMIT 2>/dev/null; then
+                # 执行cherry-pick，处理各种可能情况
                 git cherry-pick $COMMIT -X theirs --allow-empty
-                # 如果有冲突，尝试自动解决
-                if [[ $? -ne 0 ]]; then
-                  echo "检测到冲突，尝试自动解决..."
-                  git add .
-                  git cherry-pick --continue || true
+                CHERRY_PICK_STATUS=$?
+                
+                if [[ $CHERRY_PICK_STATUS -ne 0 ]]; then
+                  echo "检测到问题，尝试解决..."
+                  
+                  # 检查是否是空提交
+                  if git diff --cached --quiet && git diff --quiet; then
+                    echo "当前cherry-pick为空提交，跳过..."
+                    git cherry-pick --skip
+                  else
+                    # 尝试解决冲突
+                    echo "尝试自动解决冲突..."
+                    git add .
+                    git cherry-pick --continue || git cherry-pick --skip
+                  fi
                 fi
               else
                 echo "跳过无效的提交ID: $COMMIT"
