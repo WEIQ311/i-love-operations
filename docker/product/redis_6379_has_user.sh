@@ -4,7 +4,7 @@
 # 配置参数
 REDIS_USER="admin"
 REDIS_PASSWORD="rJXoWdOKZE9G"
-REDIS_PORT=6388
+REDIS_PORT=6379
 REDIS_CONTAINER_NAME="redis_${REDIS_PORT}"
 REDIS_IMAGE="redis:latest"
 CONFIG_DIR="$(pwd)/redis_config"
