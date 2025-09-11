@@ -33,4 +33,4 @@ jobs:
           git pull gitee master --allow-unrelated-histories || true
 
       - name: Push to GitHub
-        run: git push origin master
+        run: git push https://${{ secrets.GITHUB_TOKEN }}@github.com/WEIQ311/i-love-operations.git master
