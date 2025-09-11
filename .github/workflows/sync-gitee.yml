@@ -7,7 +7,7 @@ on:
 
 jobs:
   sync:
-    runs-on: i-love-operations-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout GitHub repo
         uses: actions/checkout@v3
