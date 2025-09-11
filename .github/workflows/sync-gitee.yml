@@ -25,9 +25,12 @@ jobs:
 
       - name: Pull from Gitee
         run: |
-          # 配置 Git 如何处理分叉的分支，使用 rebase 策略保持提交历史线性
-          git config pull.rebase true
-          git pull gitee master --allow-unrelated-histories  
+          # 使用merge策略替代rebase，避免rebase过程中的冲突问题
+          git config pull.rebase false
+          # 强制合并，忽略冲突
+          git fetch gitee master
+          git merge --strategy=ours --allow-unrelated-histories gitee/master || true
+          git pull gitee master --allow-unrelated-histories || true
 
       - name: Push to GitHub
         run: git push origin master
