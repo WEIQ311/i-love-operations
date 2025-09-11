@@ -76,7 +76,7 @@ java_process_count=$(ps -ef | grep -i java | grep -v grep | wc -l)
 
 # 输出系统总体资源使用情况 - 表格形式输出
 echo "==========================================================================================================================="
-echo "|                                                     系统资源总览                                                           |"
+echo "|                                                    系统资源总览                                                          |"
 echo "==========================================================================================================================="
 
 # 内存信息表格
@@ -370,7 +370,7 @@ done <<< "$java_processes"
 
 # 对进程信息按内存使用率由大到小排序并输出
 printf "%s\n" "${process_info_array[@]}" | sort -k1 -nr -t ' ' | while read -r mem_percent mem_mb pid cpu_percent threads service_name; do
-    echo -e "$pid\t\t${mem_mb} MB\t\t${mem_percent}%\t\t${cpu_percent}%\t\t$threads\t\t$service_name"
+    echo -e "$pid\t\t${mem_mb} MB\t\t${mem_percent}%\t\t\t${cpu_percent}%\t\t$threads\t\t$service_name"
 done
 
 # 脚本结束标记
