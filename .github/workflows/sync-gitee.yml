@@ -1,5 +1,15 @@
 name: 从Gitee同步到GitHub
 
+# 配置工作流权限
+env:
+  # 定义需要同步的目录，排除.github/workflows目录
+  EXCLUDE_DIRS: .github/workflows
+
+# 只同步除工作流文件外的内容，避免权限问题
+permissions:
+  contents: write
+  actions: read
+
 on:
   schedule:
     - cron: '0 * * * *'  # 每天每小时UTC时间整点执行，可根据需要调整cron表达式
@@ -20,17 +30,75 @@ jobs:
           git config user.name 'WEIQ311'
           git config user.email 'weiqiang_6@126.com'
 
-      - name: Add Gitee remote
-        run: git remote add gitee https://gitee.com/wei311525/i-love-operations.git
-
-      - name: Pull from Gitee
+      - name: 配置Git远程仓库
         run: |
-          # 使用merge策略替代rebase，避免rebase过程中的冲突问题
-          git config pull.rebase false
-          # 强制合并，忽略冲突
-          git fetch gitee master
-          git merge --strategy=ours --allow-unrelated-histories gitee/master || true
-          git pull gitee master --allow-unrelated-histories || true
+          # 移除之前可能存在的gitee远程仓库
+          git remote remove gitee || true
+          # 重新添加gitee远程仓库
+          git remote add gitee https://gitee.com/wei311525/i-love-operations.git
+          # 配置fetch所有分支
+          git config remote.gitee.fetch '+refs/heads/*:refs/remotes/gitee/*'
+          # 显示当前的远程仓库配置
+          git remote -v
 
-      - name: Push to GitHub
-        run: git push https://${{ secrets.GITHUB_TOKEN }}@github.com/WEIQ311/i-love-operations.git master
+      - name: 同步Gitee代码（不包括工作流文件）
+        run: |
+          echo "===== 开始同步Gitee代码 ====="
+          echo "当前工作目录: $(pwd)"
+          
+          echo "获取Gitee仓库的最新代码信息"
+          git fetch gitee --prune
+          echo "Gitee master分支的最新提交信息:"
+          git log -n 1 gitee/master --oneline
+          
+          echo "创建临时目录用于同步操作"
+          mkdir -p temp_gitee
+          echo "临时目录已创建: $(ls -la temp_gitee)"
+          
+          echo "检出Gitee代码到临时目录"
+          git --work-tree=./temp_gitee checkout gitee/master -- .
+          echo "检出后的临时目录内容:"
+          ls -la temp_gitee
+          
+          echo "移除临时目录中的工作流文件"
+          rm -rf ./temp_gitee/${{ env.EXCLUDE_DIRS }}
+          echo "移除工作流文件后的目录内容:"
+          ls -la temp_gitee
+          
+          echo "将临时目录中的文件复制到当前工作目录"
+          echo "复制前的当前目录状态:"
+          git status
+          
+          # 先创建必要的目录结构
+          find ./temp_gitee -type d -exec mkdir -p ./{} \;
+          # 再复制所有文件
+          find ./temp_gitee -type f | while read -r file; do
+            target_file="./${file#./temp_gitee/}"
+            echo "复制文件: $file -> $target_file"
+            cp "$file" "$target_file"
+          done
+          
+          echo "复制后的当前目录状态:"
+          git status
+          
+          echo "清理临时目录"
+          rm -rf temp_gitee
+          
+          echo "===== 同步Gitee代码完成 ====="
+
+      - name: 提交并推送更改
+        run: |
+          echo "检查是否有更改需要提交"
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "有更改，准备提交"
+            git add .
+            git commit -m "Sync from Gitee (excluding workflows)" || true
+            
+            echo "推送到GitHub仓库（不使用force模式）"
+            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/WEIQ311/i-love-operations.git master
+          else
+            echo "没有检测到更改，跳过提交和推送"
+          fi
+          
+          echo "操作完成，显示最终状态"
+          git status
