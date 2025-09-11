@@ -1,5 +1,4 @@
 name: 从Gitee同步到GitHub
-
 # 配置工作流权限
 env:
   # 定义需要同步的目录，排除.github/workflows目录
@@ -16,164 +15,181 @@ on:
   workflow_dispatch:  # 允许手动触发
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Get repository count
+        id: set-matrix
+        run: |
+          # 获取仓库数量
+          REPO_COUNT=$(yq e '.repositories | length' sync-config.yml)
+          # 创建数组
+          INDICES="["
+          for ((i=0; i<$REPO_COUNT; i++)); do
+            if [ $i -eq 0 ]; then
+              INDICES="${INDICES}$i"
+            else
+              INDICES="${INDICES},$i"
+            fi
+          done
+          INDICES="${INDICES}]"
+          # 构建最终的 JSON
+          echo "matrix={\"repository\":$INDICES}" >> $GITHUB_OUTPUT
+
   sync:
+    needs: prepare
+    strategy:
+      matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
+      fail-fast: false  # 某个仓库同步失败不影响其他仓库
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout GitHub repo
+      - name: Sync from Gitee
         uses: actions/checkout@v3
         with:
+          persist-credentials: false
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure Git
+      - name: Load Configuration
+        id: config
         run: |
-          git config user.name 'WEIQ311'
-          git config user.email 'weiqiang_6@126.com'
+          # 读取配置文件中指定索引的仓库配置
+          echo "正在读取配置文件..."
+          REPO_INDEX=${{ matrix.repository }}
+          
+          GITEE_REPO_URL=$(yq e ".repositories[$REPO_INDEX].gitee.repo_url" sync-config.yml)
+          GITEE_BRANCH=$(yq e ".repositories[$REPO_INDEX].gitee.branch" sync-config.yml)
+          GITHUB_REPO_NAME=$(yq e ".repositories[$REPO_INDEX].github.repo_name" sync-config.yml)
+          GITHUB_BRANCH=$(yq e ".repositories[$REPO_INDEX].github.branch // .repositories[$REPO_INDEX].gitee.branch" sync-config.yml)
+          GITHUB_PRIVATE=$(yq e ".repositories[$REPO_INDEX].github.private // false" sync-config.yml)
+          SYNC_NAME=$(yq e ".repositories[$REPO_INDEX].name" sync-config.yml)
+          
+          # 设置输出变量
+          echo "gitee_repo_url=$GITEE_REPO_URL" >> $GITHUB_OUTPUT
+          echo "gitee_branch=$GITEE_BRANCH" >> $GITHUB_OUTPUT
+          echo "github_repo_name=$GITHUB_REPO_NAME" >> $GITHUB_OUTPUT
+          echo "github_branch=$GITHUB_BRANCH" >> $GITHUB_OUTPUT
+          echo "github_private=$GITHUB_PRIVATE" >> $GITHUB_OUTPUT
+          echo "sync_name=$SYNC_NAME" >> $GITHUB_OUTPUT
 
-      - name: 配置Git远程仓库
+      - name: Check and Create Repository
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_REPO: ${{ steps.config.outputs.github_repo_name }}
+          GITHUB_USER: ${{ github.repository_owner }}
+          GITHUB_PRIVATE: ${{ steps.config.outputs.github_private }}
         run: |
-          # 移除之前可能存在的gitee远程仓库
-          git remote remove gitee || true
-          # 重新添加gitee远程仓库
-          git remote add gitee https://gitee.com/wei311525/i-love-operations.git
-          # 配置fetch所有分支
-          git config remote.gitee.fetch '+refs/heads/*:refs/remotes/gitee/*'
-          # 显示当前的远程仓库配置
-          git remote -v
-
-      - name: 同步Gitee代码（保留完整提交历史）
-        run: |
-          echo "===== 开始同步Gitee代码 ====="
-          echo "当前工作目录: $(pwd)"
+          echo "🔍 正在检查 GitHub 仓库是否存在..."
+          REPO_EXISTS=$(curl -s -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_USER/$GITHUB_REPO" | jq -r '.id // empty')
           
-          # 确保没有残留的workflow_backup目录
-          echo "清理可能残留的临时目录"
-          rm -rf workflow_backup || true
-          
-          echo "获取Gitee仓库的最新代码信息"
-          git fetch gitee --prune
-          echo "Gitee master分支的最新提交信息:"
-          git log -n 1 gitee/master --oneline
-          
-          # 保存GitHub上的工作流文件
-          echo "保存当前工作流文件"
-          mkdir -p workflow_backup
-          cp -r .github/workflows/* workflow_backup/ || true
-          
-          # 获取Gitee和GitHub之间的差异提交
-          echo "获取需要同步的差异提交列表"
-          git fetch --all
-          
-          # 显示当前分支状态和远程分支信息，用于调试
-          echo "显示当前分支状态："
-          git branch -av
-          
-          # 修复：调整git rev-list命令的参数顺序，确保正确获取差异
-          echo "比较master和gitee/master分支差异..."
-          # 方法1：尝试直接比较两个分支
-          DIFF_COMMITS=$(git rev-list --reverse master..gitee/master)
-          echo "方法1获取的差异提交数量：$(echo "$DIFF_COMMITS" | wc -l)"
-          
-          # 如果方法1没有获取到差异，尝试使用方法2
-          if [[ -z "$DIFF_COMMITS" ]]; then
-            echo "尝试使用替代方法获取差异..."
-            # 方法2：使用git cherry命令获取尚未应用的提交
-            DIFF_COMMITS=$(git cherry master gitee/master | grep '^+' | awk '{print $2}' | tac)
-            echo "方法2获取的差异提交数量：$(echo "$DIFF_COMMITS" | wc -l)"
-          fi
-          
-          if [[ -n "$DIFF_COMMITS" ]]; then
-            echo "开始逐个应用Gitee的提交（保留原始作者信息）"
-            # 逐个cherry-pick Gitee的提交，保留原始作者信息
-            for COMMIT in $DIFF_COMMITS; do
-              echo "应用提交: $COMMIT"
-              # 检查提交ID是否有效
-              if git cat-file -e $COMMIT 2>/dev/null; then
-                # 先清理可能存在的临时目录
-                rm -rf workflow_backup || true
-                
-                # 执行cherry-pick，使用更可靠的错误处理机制
-                echo "尝试cherry-pick提交: $COMMIT"
-                
-                # 临时禁用错误退出，确保单个提交失败不会中断整个工作流
-                set +e
-                
-                # 执行cherry-pick并捕获输出和状态
-                CHERRY_PICK_OUTPUT=$(git cherry-pick $COMMIT -X theirs --allow-empty 2>&1)
-                CHERRY_PICK_STATUS=$?
-                
-                if [[ $CHERRY_PICK_STATUS -ne 0 ]]; then
-                  echo "Cherry-pick失败，状态码: $CHERRY_PICK_STATUS"
-                  echo "输出信息: $CHERRY_PICK_OUTPUT"
-                  
-                  # 检查是否为空提交
-                  if echo "$CHERRY_PICK_OUTPUT" | grep -q "cherry-pick is now empty" || git status | grep -q "cherry-pick is now empty"; then
-                    echo "检测到空提交，正在跳过..."
-                    git cherry-pick --skip || true
-                  # 检查是否有冲突
-                  elif echo "$CHERRY_PICK_OUTPUT" | grep -q "CONFLICT" || git status | grep -q "Unmerged paths"; then
-                    echo "检测到冲突，尝试解决..."
-                    git add .
-                    git cherry-pick --continue || git cherry-pick --skip || true
-                  # 检查工作树是否干净（另一种空提交情况）
-                  elif git diff --cached --quiet && git diff --quiet; then
-                    echo "工作树干净，视为空提交，跳过..."
-                    git cherry-pick --skip || true
-                  else
-                    echo "其他错误情况，尝试跳过..."
-                    git cherry-pick --skip || true
-                    # 如果跳过失败，尝试中止cherry-pick
-                    git cherry-pick --abort || true
-                  fi
-                fi
-                
-                # 恢复错误退出设置
-                set -e
-              else
-                echo "跳过无效的提交ID: $COMMIT"
-              fi
-              
-              # 再次清理临时目录，确保不会残留
-              rm -rf workflow_backup || true
-            done
+          if [ -z "$REPO_EXISTS" ]; then
+            echo "📦 仓库不存在，开始创建新仓库..."
+            curl -X POST -H "Authorization: token $GH_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              https://api.github.com/user/repos \
+              -d "{\"name\":\"$GITHUB_REPO\", \"private\":$GITHUB_PRIVATE}"
+            echo "✨ 仓库创建成功！"
           else
-            echo "没有检测到差异提交，不需要同步"
-            # 添加调试信息，帮助诊断问题
-            echo "详细分支信息："
-            git log --oneline --decorate --graph --all -n 10
+            echo "✅ 仓库已存在，检查并更新可见性设置..."
+            # 更新已存在仓库的可见性
+            curl -X PATCH -H "Authorization: token $GH_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/$GITHUB_USER/$GITHUB_REPO" \
+              -d "{\"private\":$GITHUB_PRIVATE}"
+            echo "✨ 仓库可见性已更新！"
           fi
-          
-          # 由于在循环中已经清理了workflow_backup目录，我们需要特殊处理工作流文件恢复
-          echo "特殊处理工作流文件，确保GitHub上的工作流文件不受影响"
-          
-          # 检查是否有本地修改的工作流文件
-          if git status .github/workflows/ --porcelain | grep -q "^ M"; then
-            echo "检测到工作流文件有修改，需要特殊处理"
-            # 尝试使用git checkout恢复工作流文件（如果有修改）
-            git checkout -- .github/workflows/ || true
-          fi
-          
-          # 添加工作流文件的变更
-          git add .github/workflows/
-          git commit -m "Preserve GitHub workflow files" || true
-          
-          # 最终清理，确保没有临时目录残留
-          rm -rf workflow_backup || true
-          
-          echo "===== 同步Gitee代码完成（保留完整提交历史）====="
 
-      - name: 推送更改到GitHub
+      - name: Sync Repository
+        env:
+          GITEE_REPO_URL: ${{ steps.config.outputs.gitee_repo_url }}
+          GITEE_BRANCH: ${{ steps.config.outputs.gitee_branch }}
+          GITHUB_REPO: ${{ steps.config.outputs.github_repo_name }}
+          GITHUB_BRANCH: ${{ steps.config.outputs.github_branch }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_USER: ${{ github.repository_owner }}
+          GITEE_USERNAME: ${{ secrets.GITEE_USERNAME }}
+          GITEE_PASSWORD: ${{ secrets.GITEE_PASSWORD }}
         run: |
-          echo "检查是否有更改需要推送"
-          # 检查是否有未提交的更改
-          if [[ -n "$(git status --porcelain)" ]]; then
-            echo "检测到未提交的更改，准备推送到GitHub"
-            
-            echo "推送到GitHub仓库（不使用force模式）"
-            git push https://${{ secrets.GITHUB_TOKEN }}@github.com/WEIQ311/i-love-operations.git master
-          else
-            echo "没有检测到更改，跳过推送"
+          echo "🔧 配置 Git 用户信息..."
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          echo "📥 正在克隆 Gitee 仓库的 ${GITEE_BRANCH} 分支..."
+          # 构建包含认证信息的 URL
+          GITEE_AUTH_URL=$(echo "$GITEE_REPO_URL" | sed "s|https://|https://$GITEE_USERNAME:$GITEE_PASSWORD@|")
+          if ! git clone -b "$GITEE_BRANCH" "$GITEE_AUTH_URL" temp; then
+            echo "❌ 克隆 Gitee 仓库失败"
+            exit 1
           fi
           
-          echo "操作完成，显示最终状态"
-          git status
+          echo "📋 检查仓库内容..."
+          if [ ! "$(ls -A temp)" ]; then
+            echo "❌ Gitee 仓库为空"
+            rm -rf temp
+            exit 1
+          fi
+
+          echo "🔍 获取提交信息..."
+          LAST_SYNC_COMMIT=$(git log --grep="Sync from Gitee" -1 --format="%B" | grep -oP "Gitee Commit: \K[a-f0-9]+") || true
+          
+          cd temp
+          GITEE_LATEST_COMMIT=$(git rev-parse HEAD)
+          cd ..
+          
+          echo "📊 上次同步的提交: ${LAST_SYNC_COMMIT:-无}"
+          echo "📊 Gitee 最新提交: ${GITEE_LATEST_COMMIT}"
+          
+          # if [ ! -z "$LAST_SYNC_COMMIT" ] && [ "$LAST_SYNC_COMMIT" = "$GITEE_LATEST_COMMIT" ]; then
+          #   echo "✨ 无需同步：Gitee 仓库无新更改"
+          #   rm -rf temp
+          #   exit 0
+          # fi
+          
+          echo "🔄 检测到更改，开始同步..."
+          
+          echo "📋 准备工作目录..."
+          WORK_DIR="sync_workspace"
+          rm -rf $WORK_DIR
+          mkdir -p $WORK_DIR
+          
+          echo "📋 复制文件到工作目录..."
+          cd temp
+          shopt -s extglob
+          cp -r !(*.git|.github) "../$WORK_DIR/"
+          cd ..
+          rm -rf temp
+          
+          echo "🔄 准备推送代码..."
+          cd $WORK_DIR
+          
+          # 初始化 git
+          git init
+          echo "🔄 开始准备推送代码到 GitHub..."
+          
+          git add .
+          echo "✅ 已添加所有文件到暂存区"
+          
+          git commit -m "Sync from Gitee $(date '+%Y-%m-%d %H:%M:%S')
+            Gitee Commit: ${GITEE_LATEST_COMMIT}"
+          echo "✅ 已创建提交记录"
+          
+          # 推送到 GitHub
+          echo "🔗 正在配置 GitHub 远程仓库地址..."
+          git remote add origin "https://$GH_TOKEN@github.com/$GITHUB_USER/$GITHUB_REPO.git"
+          echo "✅ 远程仓库配置完成"
+          
+          echo "🌿 正在切换到 ${GITHUB_BRANCH} 分支..."
+          git branch -M ${GITHUB_BRANCH}
+          echo "✅ 分支切换完成"
+          
+          echo "⬆️ 正在推送代码到 GitHub..."
+          git push -f origin ${GITHUB_BRANCH}
+          echo "🎉 代码推送完成！"
+          
+          cd ..
+          rm -rf $WORK_DIR 
