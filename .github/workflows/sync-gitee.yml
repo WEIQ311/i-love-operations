@@ -41,7 +41,7 @@ jobs:
           # 显示当前的远程仓库配置
           git remote -v
 
-      - name: 同步Gitee代码（保留原始提交历史）
+      - name: 同步Gitee代码（真正保留完整提交历史）
         run: |
           echo "===== 开始同步Gitee代码 ====="
           echo "当前工作目录: $(pwd)"
@@ -51,34 +51,77 @@ jobs:
           echo "Gitee master分支的最新提交信息:"
           git log -n 1 gitee/master --oneline
           
-          # 保存当前的工作流文件，避免冲突
-          echo "保存当前的工作流文件"
+          # 创建一个临时分支用于cherry-pick操作
+          echo "创建临时分支"
+          git checkout -b temp-gitee-sync
+          
+          # 保存GitHub上的工作流文件
+          echo "保存当前工作流文件"
           mkdir -p workflow_backup
           cp -r .github/workflows/* workflow_backup/
           
-          # 直接检出Gitee的代码（强制覆盖，但保留工作流文件）
-          echo "检出Gitee的代码（强制覆盖）"
-          git checkout gitee/master -- .
+          # 切换到一个新分支，硬重置到Gitee的master，完全匹配Gitee的提交历史
+          echo "重置到Gitee的master分支以获取完整提交历史"
+          git checkout -b gitee-mirror
+          git reset --hard gitee/master
           
-          # 恢复保存的工作流文件
-          echo "恢复保存的工作流文件"
+          # 创建一个新分支用于最终同步，从GitHub的master分支开始
+          echo "创建最终同步分支"
+          git checkout -b final-sync master
+          
+          # 获取Gitee和GitHub之间的差异提交
+          echo "获取需要同步的差异提交列表"
+          DIFF_COMMITS=$(git log --pretty=format:"%H" master..gitee-mirror | tac)
+          
+          if [[ -n "$DIFF_COMMITS" ]]; then
+            echo "开始逐个应用Gitee的提交（保留原始作者信息）"
+            # 逐个cherry-pick Gitee的提交，保留原始作者信息
+            for COMMIT in $DIFF_COMMITS; do
+              echo "应用提交: $COMMIT"
+              git cherry-pick $COMMIT -X theirs --allow-empty
+              # 如果有冲突，尝试自动解决
+              if [[ $? -ne 0 ]]; then
+                echo "检测到冲突，尝试自动解决..."
+                git add .
+                git cherry-pick --continue || true
+              fi
+            done
+          else
+            echo "没有检测到差异提交，不需要同步"
+          fi
+          
+          # 恢复GitHub上的工作流文件
+          echo "恢复GitHub上的工作流文件"
           cp -r workflow_backup/* .github/workflows/
           rm -rf workflow_backup
           
-          echo "===== 同步Gitee代码完成（保留原始提交历史）====="
+          # 添加工作流文件的变更
+          git add .github/workflows/
+          git commit -m "Preserve GitHub workflow files" || true
+          
+          # 切换回master分支并合并最终同步分支
+          echo "切换回master分支"
+          git checkout master
+          
+          echo "合并处理后的同步分支到master"
+          git merge final-sync -m "Merge Gitee commits with preserved author information"
+          
+          # 清理临时分支
+          echo "清理临时分支"
+          git branch -D temp-gitee-sync gitee-mirror final-sync || true
+          
+          echo "===== 同步Gitee代码完成（保留完整提交历史）====="
 
-      - name: 提交并推送更改
+      - name: 推送更改到GitHub
         run: |
-          echo "检查是否有更改需要提交"
-          if [[ -n "$(git status --porcelain)" ]]; then
-            echo "有更改，准备提交"
-            git add .
-            git commit -m "Sync from Gitee (preserving original commit history)" || true
+          echo "检查是否有更改需要推送"
+          if git log --oneline HEAD^..HEAD | grep -q "Merge Gitee commits"; then
+            echo "有新的合并提交，准备推送到GitHub"
             
             echo "推送到GitHub仓库（不使用force模式）"
             git push https://${{ secrets.GITHUB_TOKEN }}@github.com/WEIQ311/i-love-operations.git master
           else
-            echo "没有检测到更改，跳过提交和推送"
+            echo "没有检测到新的合并提交，跳过推送"
           fi
           
           echo "操作完成，显示最终状态"
