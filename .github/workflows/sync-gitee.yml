@@ -43,28 +43,48 @@ jobs:
 
       - name: 同步Gitee代码（不包括工作流文件）
         run: |
-          echo "获取Gitee仓库的最新代码"
-          git fetch gitee
+          echo "===== 开始同步Gitee代码 ====="
+          echo "当前工作目录: $(pwd)"
+          
+          echo "获取Gitee仓库的最新代码信息"
+          git fetch gitee --prune
+          echo "Gitee master分支的最新提交信息:"
+          git log -n 1 gitee/master --oneline
           
           echo "创建临时目录用于同步操作"
           mkdir -p temp_gitee
+          echo "临时目录已创建: $(ls -la temp_gitee)"
           
           echo "检出Gitee代码到临时目录"
           git --work-tree=./temp_gitee checkout gitee/master -- .
+          echo "检出后的临时目录内容:"
+          ls -la temp_gitee
           
           echo "移除临时目录中的工作流文件"
           rm -rf ./temp_gitee/${{ env.EXCLUDE_DIRS }}
+          echo "移除工作流文件后的目录内容:"
+          ls -la temp_gitee
           
           echo "将临时目录中的文件复制到当前工作目录"
-          # 使用cp命令代替rsync，更简单且避免消失文件警告
-          find ./temp_gitee -type f -exec cp --parents {} ./ \;
+          echo "复制前的当前目录状态:"
+          git status
+          
+          # 先创建必要的目录结构
           find ./temp_gitee -type d -exec mkdir -p ./{} \;
+          # 再复制所有文件
+          find ./temp_gitee -type f | while read -r file; do
+            target_file="./${file#./temp_gitee/}"
+            echo "复制文件: $file -> $target_file"
+            cp "$file" "$target_file"
+          done
+          
+          echo "复制后的当前目录状态:"
+          git status
           
           echo "清理临时目录"
           rm -rf temp_gitee
           
-          echo "显示同步后的文件状态"
-          git status
+          echo "===== 同步Gitee代码完成 ====="
 
       - name: 提交并推送更改
         run: |
