@@ -17,15 +17,17 @@ jobs:
 
       - name: Configure Git
         run: |
-          git config --global user.name 'WEIQ311'
-          git config --global user.email 'weiqiang_6@126.com'
+          git config user.name 'WEIQ311'
+          git config user.email 'weiqiang_6@126.com'
 
       - name: Add Gitee remote
         run: git remote add gitee https://gitee.com/wei311525/i-love-operations.git
 
       - name: Pull from Gitee
         run: |
+          # 配置 Git 如何处理分叉的分支，使用 rebase 策略保持提交历史线性
+          git config pull.rebase true
           git pull gitee master --allow-unrelated-histories  
 
       - name: Push to GitHub
-        run: git push origin master 
+        run: git push origin master
