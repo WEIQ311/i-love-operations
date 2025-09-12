@@ -116,8 +116,8 @@ jobs:
           GITEE_PASSWORD: ${{ secrets.GITEE_PASSWORD }}
         run: |
           echo "🔧 配置 Git 用户信息..."
-          git config user.name "WEIQ311"
-          git config user.email "weiqiang_6@126.com"
+          git config --global user.name "WEIQ311"
+          git config --global user.email "weiqiang_6@126.com"
           
           echo "📥 正在克隆 Gitee 仓库的 ${GITEE_BRANCH} 分支..."
           # 构建包含认证信息的 URL
@@ -173,6 +173,9 @@ jobs:
           
           git add .
           echo "✅ 已添加所有文件到暂存区"
+
+          git config user.name 'WEIQ311'
+          git config user.email 'weiqiang_6@126.com'
           
           git commit -m "Sync from Gitee $(date '+%Y-%m-%d %H:%M:%S')
             Gitee Commit: ${GITEE_LATEST_COMMIT}"
