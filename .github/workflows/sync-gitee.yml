@@ -173,18 +173,15 @@ jobs:
           
           git add .
           echo "✅ 已添加所有文件到暂存区"
-
-          git config user.name 'WEIQ311'
-          git config user.email 'weiqiang_6@126.com'
           
           git commit -m "Sync from Gitee $(date '+%Y-%m-%d %H:%M:%S')
             Gitee Commit: ${GITEE_LATEST_COMMIT}"
           echo "✅ 已创建提交记录"
           
           # 推送到 GitHub
-          echo "🔗 正在配置 GitHub 远程仓库地址..."
-          git remote add origin "https://github.com/WEIQ311/i-love-operations.git"
-          echo "✅ 远程仓库配置完成"
+          #echo "🔗 正在配置 GitHub 远程仓库地址..."
+          # git remote add origin https://${{ secrets.GITHUB_TOKEN }}@github.com/WEIQ311/i-love-operations.git 
+          # echo "✅ 远程仓库配置完成"
           
           echo "🌿 正在切换到 ${GITHUB_BRANCH} 分支..."
           git branch -M ${GITHUB_BRANCH}
