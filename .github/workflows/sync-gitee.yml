@@ -11,7 +11,8 @@ permissions:
 
 on:
   schedule:
-    - cron: '0 * * * *'  # 每天每小时UTC时间整点执行，可根据需要调整cron表达式
+    # 对应 UTC 的 06:00, 14:00, 15:00, 16:00
+    - cron: '0 6,14,15,16 * * *'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
