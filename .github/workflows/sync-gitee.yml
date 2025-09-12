@@ -183,7 +183,7 @@ jobs:
           
           # 推送到 GitHub
           echo "🔗 正在配置 GitHub 远程仓库地址..."
-          git remote add origin "https://$GH_TOKEN@github.com/$GITHUB_USER/$GITHUB_REPO.git"
+          git remote add origin "https://${{ secrets.GITHUB_TOKEN }}@github.com/WEIQ311/i-love-operations.git"
           echo "✅ 远程仓库配置完成"
           
           echo "🌿 正在切换到 ${GITHUB_BRANCH} 分支..."
