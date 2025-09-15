@@ -11,24 +11,27 @@ fi
 
 # 检查必要工具是否安装
 check_dependencies() {
-    local dependencies=("sysstat" "net-tools")
-    local missing=()
+    # 使用简单变量替代数组以提高兼容性
+    local dependencies="sysstat net-tools"
+    local missing=""
 
-    for dep in "${dependencies[@]}"; do
+    # 检查每个依赖项
+    for dep in $dependencies; do
         if ! command -v $dep &> /dev/null && ! dpkg -s $dep &> /dev/null && ! rpm -q $dep &> /dev/null; then
-            missing+=($dep)
+            missing="$missing $dep"
         fi
     done
 
-    if [ ${#missing[@]} -gt 0 ]; then
+    # 安装缺失的依赖
+    if [ -n "$missing" ]; then
         echo "检测到缺少必要工具，正在尝试安装..."
         if command -v apt &> /dev/null; then
             sudo apt update -y &> /dev/null
-            sudo apt install -y "${missing[@]}" &> /dev/null
+            sudo apt install -y $missing &> /dev/null
         elif command -v yum &> /dev/null; then
-            sudo yum install -y "${missing[@]}" &> /dev/null
+            sudo yum install -y $missing &> /dev/null
         else
-            echo "无法自动安装依赖，请手动安装: ${missing[*]}"
+            echo "无法自动安装依赖，请手动安装: $missing"
             exit 1
         fi
     fi
@@ -139,20 +142,32 @@ add_to_report "<h2>2. 环境变量安全检测</h2>"
 # 2.1 PATH环境变量分析
 add_to_report "<h3>PATH环境变量分析</h3>"
 path_var=$PATH
-IFS=':' read -ra path_array <<< "$path_var"
-add_to_report "<p>PATH包含 <strong>${#path_array[@]}</strong> 个路径</p>"
+# 使用循环替代数组分割以提高兼容性
+path_count=0
+for path in $path_var; do
+    path_count=$((path_count+1))
+done
+add_to_report "<p>PATH包含 <strong>$path_count</strong> 个路径</p>"
 
-dangerous_paths=("/" "/root" "/tmp" "/var/tmp" "/dev/shm")
 dangerous_found=0
-for path in "${path_array[@]}"; do
-    if [[ " ${dangerous_paths[@]} " =~ " $path " ]]; then
-        add_to_report "<p class='warning'>危险路径: $path (包含在PATH中)</p>"
-        dangerous_found=1
-    fi
+# 检查危险路径
+dangerous_paths="/ /root /tmp /var/tmp /dev/shm"
+for path in $path_var; do
+    for dangerous_path in $dangerous_paths; do
+        if [ "$path" = "$dangerous_path" ]; then
+            add_to_report "<p class='warning'>危险路径: $path (包含在PATH中)</p>"
+            dangerous_found=1
+            break
+        fi
+    done
 
-    if [ -d "$path" ] && [ -w "$path" ] && ! ls -ld "$path" 2>/dev/null | grep -qE '^drwxr-xr-x'; then
-        add_to_report "<p class='warning'>可写路径: $path (存在非授权写入风险)</p>"
-        dangerous_found=1
+    if [ -d "$path" ] && [ -w "$path" ]; then
+        # 检查目录权限
+        perms=$(ls -ld "$path" 2>/dev/null | cut -c1-10)
+        if [ "$perms" != "drwxr-xr-x" ]; then
+            add_to_report "<p class='warning'>可写路径: $path (存在非授权写入风险)</p>"
+            dangerous_found=1
+        fi
     fi
 done
 
@@ -162,9 +177,9 @@ fi
 
 # 2.2 敏感环境变量扫描
 add_to_report "<h3>敏感环境变量扫描</h3>"
-sensitive_vars=("PASSWORD" "SECRET" "KEY" "TOKEN" "CREDENTIAL" "PASS" "DB_PASS")
+sensitive_vars="PASSWORD SECRET KEY TOKEN CREDENTIAL PASS DB_PASS"
 found_sensitive=0
-for var in "${sensitive_vars[@]}"; do
+for var in $sensitive_vars; do
     matches=$(env | grep -i "$var" | grep -v -E '^SHLVL=|^PWD=|^_=|^LS_COLORS=')
     if [ -n "$matches" ]; then
         found_sensitive=1
@@ -180,10 +195,10 @@ fi
 
 # 2.3 环境配置文件检查
 add_to_report "<h3>环境配置文件权限检查</h3>"
-env_files=("/etc/profile" "/etc/bashrc" "$HOME/.bashrc" "$HOME/.bash_profile")
+env_files="/etc/profile /etc/bashrc $HOME/.bashrc $HOME/.bash_profile"
 add_to_report "<table>"
 add_to_report "<tr><th>文件</th><th>权限</th><th>状态</th></tr>"
-for file in "${env_files[@]}"; do
+for file in $env_files; do
     if [ -f "$file" ]; then
         perms=$(stat -c "%a" "$file" 2>/dev/null)
         if [ "$perms" -gt 644 ]; then
@@ -276,14 +291,11 @@ fi
 
 # 5.2 关键文件权限检查
 add_to_report "<h3>关键文件权限检查</h3>"
-critical_files=(
-    "/etc/passwd" "/etc/shadow" "/etc/sudoers"
-    "/etc/group" "/etc/hosts" "/etc/resolv.conf"
-)
+critical_files="/etc/passwd /etc/shadow /etc/sudoers /etc/group /etc/hosts /etc/resolv.conf"
 
 add_to_report "<table>"
 add_to_report "<tr><th>文件</th><th>当前权限</th><th>建议权限</th><th>状态</th></tr>"
-for file in "${critical_files[@]}"; do
+for file in $critical_files; do
     if [ -f "$file" ]; then
         perms=$(stat -c "%a" "$file" 2>/dev/null)
         case $file in
@@ -494,10 +506,37 @@ for service in "${critical_services[@]}"; do
     if systemctl is-active --quiet $service 2>/dev/null; then
         add_to_report "<tr><td>$service</td><td class='success'>正常运行</td></tr>"
     else
+        # 使用更可靠的进程检测方法
+        process_found=0
+        
+        # 方法1: 使用pgrep (更精确的进程名匹配)
+        if command -v pgrep &> /dev/null; then
+            if pgrep -x "$service" &> /dev/null; then
+                process_found=1
+            fi
+        fi
+        
+        # 方法2: 如果pgrep不可用或失败，使用更精确的ps grep模式
+        if [ $process_found -eq 0 ]; then
+            # 使用-E参数支持正则表达式，确保匹配完整的服务名
+            # 例如nginx可以匹配到nginx: master process或nginx: worker process
+            if ps -ef | grep -v grep | grep -E "[[:space:]]$service|/$service|$service[:[:space:]]" &> /dev/null; then
+                process_found=1
+            fi
+        fi
+        
         if systemctl list-unit-files --type=service 2>/dev/null | grep -q "$service"; then
-            add_to_report "<tr><td>$service</td><td class='warning'>已安装但未运行</td></tr>"
+            if [ $process_found -eq 1 ]; then
+                add_to_report "<tr><td>$service</td><td class='success'>正常运行(非systemctl管理)</td></tr>"
+            else
+                add_to_report "<tr><td>$service</td><td class='warning'>已安装但未运行</td></tr>"
+            fi
         else
-            add_to_report "<tr><td>$service</td><td>未安装</td></tr>"
+            if [ $process_found -eq 1 ]; then
+                add_to_report "<tr><td>$service</td><td class='success'>正常运行(非systemctl管理)</td></tr>"
+            else
+                add_to_report "<tr><td>$service</td><td>未安装</td></tr>"
+            fi
         fi
     fi
 done
@@ -611,8 +650,9 @@ fi
 add_to_report "</ul>"
 add_to_report "</div>"
 
-# 添加JavaScript标签页功能
-add_to_report "<script>
+# 添加JavaScript标签页功能 - 修复openTab函数
+{ cat << 'JS_EOF' >> $REPORT_FILE
+<script>
 function openTab(evt, tabName) {
     var i, tabcontent, tablinks;
     tabcontent = document.getElementsByClassName('tabcontent');
@@ -627,9 +667,13 @@ function openTab(evt, tabName) {
     evt.currentTarget.className += ' active';
 }
 
-// 默认打开第一个标签页
-document.getElementById('defaultOpen').click();
-</script>"
+// 页面加载完成后执行，默认打开第一个标签页
+window.onload = function() {
+    document.getElementById('defaultOpen').click();
+}
+</script>
+JS_EOF
+}
 
 # 完成HTML报告
 add_to_report "</div></body></html>"
