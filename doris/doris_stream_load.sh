@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# 添加入参说明和检测
+if [ $# -lt 13 ]; then
+  echo "Usage: $0 <userName> <password> <hostName> <httpPort> <owner> <tableNames> <maxFilterRatio> <separator> <ignoreLines> <timeOut> <fieldEncloseCharacter> <columnsString> <files>"
+  exit 1
+fi
+
 # 从入参数获取参数
 userName=${1:-"root"}
 password=${2:-""}
@@ -14,6 +20,12 @@ timeOut=${10:-30000}
 fieldEncloseCharacter=${11:-"'"}
 columnsString=${12:-""}
 files=${13:-""}
+
+# 检测columnsString是否为空
+if [ -z "$columnsString" ] || [ -z "$tableNames" ] || [ -z "$owner" ]; then
+  echo "错误: columnsString, tableNames, owner 不能为空"
+  exit 1
+fi
 # 检测文件是否存在
 if [ ! -f "$files" ]; then
   echo "错误: 文件 '$files' 不存在"
