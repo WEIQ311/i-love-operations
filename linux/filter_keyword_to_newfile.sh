@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# 功能：从文件中过滤包含特定关键词的行，并将这些行提取到新文件中
+# 功能：从文件中过滤包含特定关键词的行，并将这些行提取到新文件中（修复版）
 # 作者：技术专家
 # 日期：2025-10
 
@@ -11,19 +11,20 @@ set -euo pipefail
 show_help() {
     echo "用法: $0 [选项] 关键词 输入文件 输出文件"
     echo ""
-    echo "选项:"
+    echo "选项:" 
     echo "  -i, --ignore-case   忽略大小写"
     echo "  -v, --invert        反转匹配，即提取不包含关键词的行"
     echo "  -h, --help          显示帮助信息"
     echo ""
-    echo "示例:"
+    echo "示例:" 
     echo "  $0 ERROR logfile.txt error_lines.txt      # 提取包含ERROR的行"
     echo "  $0 -i warning logfile.txt warning_lines.txt # 忽略大小写提取包含warning的行"
     echo "  $0 -v DEBUG logfile.txt non_debug_lines.txt # 提取不包含DEBUG的行"
+    echo "  $0 '特殊|#|字符' input.txt output.txt   # 提取包含特殊字符的行（需要用单引号包围）"
 }
 
 # 处理命令行选项
-ignore_case=false
+ingnore_case=false
 invert_match=false
 
 while [[ $# -gt 0 ]]; do
@@ -74,9 +75,9 @@ if $invert_match; then
     grep_options="$grep_options -v"
 fi
 
-# 执行过滤操作
+# 执行过滤操作 - 使用grep的-F选项来固定字符串匹配（不解释正则表达式）
 echo "正在从 '$input_file' 中过滤包含关键词 '$keyword' 的行..."
-grep $grep_options "$keyword" "$input_file" > "$output_file"
+grep $grep_options -F "$keyword" "$input_file" > "$output_file"
 
 # 检查命令执行结果
 if [[ $? -eq 0 ]]; then
@@ -86,5 +87,4 @@ else
     echo "警告：未找到匹配的行，已创建空的输出文件"
 fi
 
-# 恢复默认的shell行为
-sed -i "" 's/set -euo pipefail//g' "$output_file" || true
+# 注意：移除了之前不适当的sed命令，该命令尝试从输出文件中删除set -euo pipefail是不合理的

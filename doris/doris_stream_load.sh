@@ -13,7 +13,7 @@ hostName=${3:-""}
 httpPort=${4:-8030}
 owner=${5:-""}
 tableNames=${6:-""}
-maxFilterRatio=${7:-0.5}
+maxFilterRatio=${7:-0}
 separator=${8:-"|#|"}
 ignoreLines=${9:-0}
 timeOut=${10:-30000}
@@ -31,6 +31,10 @@ if [ ! -f "$files" ]; then
   echo "错误: 文件 '$files' 不存在"
   exit 1
 fi
+echo "最大错误比例: $maxFilterRatio"
+echo "超时: $timeOut"
+echo "分隔符: $separator,字段包裹字符: $fieldEncloseCharacter"
+
 #协议类型
 if [[ $hostName == *"181"* || $hostName == *"244"* ]]; then
   protocol="http"
