@@ -8,18 +8,18 @@ fi
 
 # 从入参数获取参数
 userName=${1:-"root"}
-password=${2:-""}
-hostName=${3:-""}
+password=${2:-"root"}
+hostName=${3:-"192.168.1.181"}
 httpPort=${4:-8030}
-owner=${5:-""}
-tableNames=${6:-""}
+owner=${5:-"doris_test"}
+tableNames=${6:-"hudi_table_with_all_types_new"}
 maxFilterRatio=${7:-0}
 separator=${8:-"|#|"}
 ignoreLines=${9:-0}
 timeOut=${10:-30000}
 fieldEncloseCharacter=${11:-"'"}
 columnsString=${12:-""}
-files=${13:-""}
+files=${13:-"hudi_table_with_all_types_new.csv"}
 
 # 检测文件是否存在
 if [ ! -f "$files" ]; then
@@ -36,36 +36,29 @@ else
   apiPort=${httpPort:-29991}
 fi
 
+echo "protocol:${protocol}   httpPort:${httpPort}"
 echo "最大错误比例:${maxFilterRatio}"
 echo "超时时间:${timeOut}"
 
-# 构建curl命令并先打印输出，然后执行
-curl_command="curl -s -k --location-trusted \
-  -u \"${userName}:${password}\" \
-  -H \"Expect:100-continue\" \
-  -H \"max_filter_ratio:${maxFilterRatio}\" \
-  -H \"column_separator:${separator}\" \
-  -H \"skip_lines:${ignoreLines}\" \
-  -H \"timeout:${timeOut}\" \
-  -H \"enclose:${fieldEncloseCharacter}\" \
-  -H \"escape:\\\\\" \
-  -H \"columns:${columnsString}\" \
+# 执行curl命令并捕获结果
+doris_res=$(curl -s -k --location-trusted \
+  -u "${userName}:${password}" \
+  -H "Expect:100-continue" \
+  -H "max_filter_ratio:${maxFilterRatio}" \
+  -H "column_separator:${separator}" \
+  -H "skip_lines:${ignoreLines}" \
+  -H "timeout:${timeOut}" \
+  -H "enclose:${fieldEncloseCharacter}" \
+  -H "escape:\\" \
+  -H "columns:${columnsString}" \
   -T ${files} \
   -XPUT \
-  ${protocol}://${hostName}:${apiPort}/api/${owner}/${tableNames}/_stream_load"
-
-# 打印curl命令（注意：会显示密码，在生产环境使用时请谨慎）
-echo "即将执行的curl命令："
-echo "${curl_command}"
-echo "======================================"
-
-# 执行curl命令并捕获结果
-doris_res=$(eval "${curl_command}")
+  ${protocol}://${hostName}:${apiPort}/api/${owner}/${tableNames}/_stream_load
+)
 
 # 检查curl命令是否成功执行
 if [ $? -ne 0 ]; then
   echo "错误: curl命令执行失败"
-  echo "原始响应: $doris_res"
   exit 1
 fi
 
@@ -101,4 +94,4 @@ else
 fi
 
  # 示例用法：
- # ./doris_stream_load.sh root "root" 192.168.1.181 8030 doris_test doris_test_table 0.5 "|#|" 0 30000 "'" "column1,column2,column3" doris_test_table.csv
+ # ./doris_stream_load_fixed.sh root "root" 192.168.1.181 hudi_table_with_all_types_new.csv doris_test hudi_table_with_all_types_new 0.5 |#| 0 30000 "'" "'" "column1,column2,column3" hudi_table_with_all_types_new.csv
