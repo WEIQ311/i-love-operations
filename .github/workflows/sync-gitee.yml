@@ -1,4 +1,9 @@
 name: 从Gitee同步到GitHub
+# 配置工作流权限
+env:
+  # 定义需要同步的目录，排除.github/workflows目录
+  EXCLUDE_DIRS: .github/workflows
+
 # 只同步除工作流文件外的内容，避免权限问题
 permissions:
   contents: write
@@ -8,8 +13,7 @@ on:
   schedule:
     # 对应 UTC 的 06:00, 14:00, 15:00, 16:00
     - cron: '0 6,14,15,16 * * *'
-  # 允许手动触发
-  workflow_dispatch:  
+  workflow_dispatch:  # 允许手动触发
 
 jobs:
   prepare:
@@ -37,7 +41,6 @@ jobs:
           INDICES="${INDICES}]"
           # 构建最终的 JSON
           echo "matrix={\"repository\":$INDICES}" >> $GITHUB_OUTPUT
-
   sync:
     needs: prepare
     strategy:
@@ -72,7 +75,6 @@ jobs:
           echo "github_branch=$GITHUB_BRANCH" >> $GITHUB_OUTPUT
           echo "github_private=$GITHUB_PRIVATE" >> $GITHUB_OUTPUT
           echo "sync_name=$SYNC_NAME" >> $GITHUB_OUTPUT
-
       - name: Check and Create Repository
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -100,7 +102,6 @@ jobs:
               -d "{\"private\":$GITHUB_PRIVATE}"
             echo "✨ 仓库可见性已更新！"
           fi
-
       - name: Sync Repository
         env:
           GITEE_REPO_URL: ${{ steps.config.outputs.gitee_repo_url }}
@@ -130,7 +131,6 @@ jobs:
             rm -rf temp
             exit 1
           fi
-
           echo "🔍 获取提交信息..."
           LAST_SYNC_COMMIT=$(git log --grep="Sync from Gitee" -1 --format="%B" | grep -oP "Gitee Commit: \K[a-f0-9]+") || true
           
