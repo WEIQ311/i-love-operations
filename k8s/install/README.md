@@ -163,4 +163,4 @@ reboot
 
 ## 版本历史
 
-- **v1.0** (2025-10-24): 初始版本，支持 CentOS/RHEL、Ubuntu、Debian 系统，提供完整的 Kubernetes 安装、配置和卸载功能
+- **v1.0** (2025-10-10): 初始版本，支持 CentOS/RHEL、Ubuntu、Debian 系统，提供完整的 Kubernetes 安装、配置和卸载功能
