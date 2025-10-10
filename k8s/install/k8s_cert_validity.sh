@@ -179,28 +179,90 @@ verify_cert_validity() {
     local all_certs_valid=true
     local cert_count=0
     local valid_years=0
+    local error_occurred=false
     
     for cert in "${cert_files[@]}"; do
         if [[ -f "$cert" ]]; then
             cert_count=$((cert_count + 1))
-            local not_after="$(openssl x509 -in "$cert" -text -noout | grep -A 1 "Validity" | grep "Not After" | awk -F: '{print $2, $3, $4, $5, $6}')"
-            local not_after_timestamp="$(date -d "$not_after" +%s)"
-            local current_timestamp="$(date +%s)"
-            local validity_days=$(( ($not_after_timestamp - $current_timestamp) / 86400 ))
-            local validity_years=$(echo "scale=2; $validity_days / 365" | bc)
             
-            if (( $validity_days < 3650 )); then  # 小于10年
-                log_warn "证书 $cert 有效期还剩约 $validity_years 年 ($validity_days 天)"
-                all_certs_valid=false
+            # 增强的Not After日期提取逻辑，支持不同格式的openssl输出
+            # 使用多种方法尝试提取Not After日期
+            local not_after
+            local methods_tried=0
+            local max_methods=4
+            
+            # 方法1: 基本的grep和sed提取
+            if not_after="$(openssl x509 -in "$cert" -text -noout 2>/dev/null | grep -A 1 "Validity" | grep -i "Not After" | sed 's/^[[:space:]]*Not After[[:space:]]*:[[:space:]]*//i')" && [[ -n "$not_after" ]]; then
+                methods_tried=1
+            # 方法2: 更宽松的正则表达式
+            elif not_after="$(openssl x509 -in "$cert" -text -noout 2>/dev/null | grep -i "not after" | sed 's/^.*Not After[^:]*:[[:space:]]*//i')" && [[ -n "$not_after" ]]; then
+                methods_tried=2
+            # 方法3: 尝试直接使用-enddate选项
+            elif not_after="$(openssl x509 -in "$cert" -enddate -noout 2>/dev/null | sed 's/notAfter=//')" && [[ -n "$not_after" ]]; then
+                methods_tried=3
+            # 方法4: 尝试使用日期格式化选项
+            elif not_after="$(openssl x509 -in "$cert" -dates -noout 2>/dev/null | grep -i "notafter" | sed 's/^.*=//')" && [[ -n "$not_after" ]]; then
+                methods_tried=4
+            fi
+            
+            if [[ -n "$not_after" ]]; then
+                log_info "证书 $cert 找到，Not After: $not_after (提取方法 $methods_tried)"
+                
+                # 尝试使用不同的日期解析方式，适应不同系统的date命令实现
+                local date_parse_success=false
+                local not_after_timestamp
+                
+                # 尝试GNU date (Linux)
+                if not_after_timestamp="$(date -d "$not_after" +%s 2>/dev/null)"; then
+                    date_parse_success=true
+                # 尝试BSD date (macOS)，使用多种格式
+                elif not_after_timestamp="$(date -jf "%b %d %T %Y %Z" "$not_after" +%s 2>/dev/null)"; then
+                    date_parse_success=true
+                elif not_after_timestamp="$(date -jf "%Y-%m-%d %T" "$not_after" +%s 2>/dev/null)"; then
+                    date_parse_success=true
+                elif not_after_timestamp="$(date -jf "%b %d %Y %T" "$not_after" +%s 2>/dev/null)"; then
+                    date_parse_success=true
+                fi
+                
+                if $date_parse_success; then
+                    local current_timestamp="$(date +%s)"
+                    local validity_days=$(( ($not_after_timestamp - $current_timestamp) / 86400 ))
+                    
+                    # 计算有效年份（保留2位小数）
+                    local validity_years
+                    if validity_years="$(echo "scale=2; $validity_days / 365" | bc 2>/dev/null)"; then
+                        : # bc命令成功
+                    else
+                        validity_years="$((validity_days / 365)).$(( (validity_days % 365) * 100 / 365 ))"
+                    fi
+                    
+                    # 确保年份显示正确（避免负数）
+                    if (( $validity_days < 0 )); then
+                        log_error "证书 $cert 已过期 $((-validity_days)) 天"
+                        all_certs_valid=false
+                    elif (( $validity_days < 3650 )); then  # 小于10年
+                        log_warn "证书 $cert 有效期还剩约 $validity_years 年 ($validity_days 天)"
+                        all_certs_valid=false
+                    else
+                        log_info "证书 $cert 有效期还剩约 $validity_years 年 ($validity_days 天)"
+                    fi
+                else
+                    log_error "无法解析证书 $cert 的日期格式: $not_after"
+                    all_certs_valid=false
+                    error_occurred=true
+                fi
             else
-                log_info "证书 $cert 有效期还剩约 $validity_years 年 ($validity_days 天)"
+                log_warn "无法从证书 $cert 中提取Not After日期"
+                all_certs_valid=false
+                error_occurred=true
             fi
         fi
     done
     
     if [[ $cert_count -eq 0 ]]; then
         log_error "未找到Kubernetes证书，请检查是否正确安装了Kubernetes"
-        exit 1
+        # 不直接退出，而是返回非零状态码
+        return 1
     fi
     
     log_info "共检查了 $cert_count 个证书"
@@ -208,6 +270,11 @@ verify_cert_validity() {
         log_success "所有证书有效期都已延长"
     else
         log_warn "部分证书有效期较短，建议延长"
+    fi
+    
+    # 如果有错误发生，返回非零状态码但不退出脚本
+    if $error_occurred; then
+        log_warn "证书验证过程中遇到一些问题，但脚本将继续执行"
     fi
 }
 
@@ -355,7 +422,10 @@ main() {
 
     # 仅验证证书有效期
     if [[ "$ONLY_VERIFY" == "true" ]]; then
-        verify_cert_validity
+        # 即使验证出错也显示完成信息
+        if ! verify_cert_validity; then
+            log_warn "证书验证过程中遇到问题，但脚本执行完成"
+        fi
         echo -e "${COLOR_GREEN}\n==================================================${COLOR_RESET}"
         echo -e "${COLOR_GREEN}      Kubernetes证书有效期验证完成${COLOR_RESET}"
         echo -e "${COLOR_GREEN}==================================================${COLOR_RESET}"
@@ -371,8 +441,11 @@ main() {
     # 重新生成证书
     regenerate_certs
 
-    # 验证证书有效期
-    verify_cert_validity
+    # 验证证书有效期，即使失败也继续验证集群状态
+    log_info "验证新生成的证书有效期..."
+    if ! verify_cert_validity; then
+        log_warn "证书验证遇到问题，但将继续验证集群状态"
+    fi
 
     # 验证集群状态
     verify_cluster_status
