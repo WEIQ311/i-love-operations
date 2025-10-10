@@ -9,6 +9,7 @@
 | `k8s_install.sh` | Kubernetes 集群安装脚本，支持 Master 节点和 Worker 节点安装 |
 | `k8s_uninstall.sh` | Kubernetes 集群卸载脚本，可清理所有相关组件和数据 |
 | `k8s_worker_join.sh` | Worker 节点专用加入集群脚本，简化节点扩展流程 |
+| `k8s_cert_validity.sh` | Kubernetes 证书有效期修改脚本，支持将默认1年证书有效期延长至100年 |
 
 ## 系统要求
 
@@ -43,6 +44,16 @@
 - 自动识别并安装匹配的 Kubernetes 版本
 - 支持从 Master 节点获取的加入命令
 - 简化 Worker 节点配置流程
+
+### k8s_cert_validity.sh 特点
+- 将 Kubernetes 默认的1年证书有效期修改为自定义天数（默认为100年/36500天）
+- 支持证书有效期验证功能，无需修改即可查看当前证书状态
+- 自动备份现有证书，确保安全可回滚
+- 重新生成控制平面所有证书
+- 保留 CA 证书，避免影响整个集群证书体系
+- 提供详细的证书有效期信息和操作日志
+- 支持多系统（CentOS/RHEL、Ubuntu、Debian）
+- 提供跳过备份选项（不推荐在生产环境使用）
 
 ## 使用方法
 
@@ -98,7 +109,23 @@ kubeadm join 192.168.1.100:6443 --token abcdef.1234567890abcdef --discovery-toke
 
 # 卸载并彻底清理所有数据
 ./k8s_uninstall.sh --purge
+```
 
+### 5. 修改证书有效期
+
+```bash
+# 默认将证书有效期修改为100年
+./k8s_cert_validity.sh
+
+# 仅验证当前证书有效期，不进行修改
+./k8s_cert_validity.sh --only-verify
+
+# 自定义证书有效期为20年（7300天）
+./k8s_cert_validity.sh --validity-days=7300
+
+# 跳过证书备份（不推荐）
+./k8s_cert_validity.sh --skip-backup
+```
 # 完全卸载并清理所有内容
 ./k8s_uninstall.sh --all --purge
 ```
@@ -163,4 +190,5 @@ reboot
 
 ## 版本历史
 
+- **v1.1** (2025-10-10): 添加了证书有效期修改脚本，优化了现有脚本的日志系统和错误处理
 - **v1.0** (2025-10-10): 初始版本，支持 CentOS/RHEL、Ubuntu、Debian 系统，提供完整的 Kubernetes 安装、配置和卸载功能
