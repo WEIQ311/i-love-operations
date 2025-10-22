@@ -64,11 +64,11 @@ sudo certbot certonly \
   --dns-cloudflare \
   --dns-cloudflare-credentials ~/.secrets/certbot/cloudflare.ini \
   --dns-cloudflare-propagation-seconds 60 \
-  --email admin@bonc.club \
+  --email admin@ai.com \
   --server https://acme-v02.api.letsencrypt.org/directory \
   --agree-tos \
-  -d bonc.club \
-  -d *.bonc.club
+  -d ai.com \
+  -d *.ai.com
 ```
 
 ## 4. 常用 DNS 插件配置示例
@@ -96,11 +96,11 @@ sudo certbot certonly \
   --dns-aliyun \
   --dns-aliyun-credentials ~/.secrets/certbot/aliyun.ini \
   --dns-aliyun-propagation-seconds 60 \
-  --email admin@bonc.club \
+  --email admin@ai.com \
   --server https://acme-v02.api.letsencrypt.org/directory \
   --agree-tos \
-  -d bonc.club \
-  -d *.bonc.club
+  -d ai.com \
+  -d *.ai.com
 ```
 
 ### 4.2 DNSPod
@@ -126,11 +126,11 @@ sudo certbot certonly \
   --dns-dnspod \
   --dns-dnspod-credentials ~/.secrets/certbot/dnspod.ini \
   --dns-dnspod-propagation-seconds 60 \
-  --email admin@bonc.club \
+  --email admin@ai.com \
   --server https://acme-v02.api.letsencrypt.org/directory \
   --agree-tos \
-  -d bonc.club \
-  -d *.bonc.club
+  -d ai.com \
+  -d *.ai.com
 ```
 
 ## 5. 集成到自动续期脚本
