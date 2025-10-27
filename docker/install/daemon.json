@@ -17,5 +17,11 @@
 		"https://docker.1panel.live",
 		"https://image.cloudlayer.icu",
 		"https://docker.1ms.run"
-	]
+	],
+	"live-restore": true,
+	"log-driver": "json-file",
+	"log-opts": {
+		"max-size": "10m",
+		"max-file": "3"
+	}
 }
