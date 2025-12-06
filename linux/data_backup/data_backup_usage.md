@@ -2,16 +2,16 @@
 
 ## 概述
 
-这是一个经过优化的数据备份脚本，支持加密备份、日志管理、错误处理和自动清理功能。
+这是一个经过优化的数据备份脚本，用于将/opt/docker-sh/app/目录备份到/data01/docker-sh/app/目录，并生成压缩文件。脚本支持日志管理、错误处理、磁盘空间检查和自动清理功能。
 
 ## 功能特性
 
-- ✅ **加密备份**：使用AES-256-CBC算法加密备份文件
-- ✅ **日志管理**：支持日志级别、日志轮转和大小控制
+- ✅ **日志管理**：详细的日志记录，包括备份过程的各个步骤
 - ✅ **错误处理**：完善的错误检测和处理机制
-- ✅ **安全检查**：目录权限、磁盘空间、依赖检查
-- ✅ **自动清理**：自动删除超过保留期限的旧备份
-- ✅ **环境配置**：支持通过环境变量进行配置
+- ✅ **磁盘空间检查**：自动检查备份目录的可用空间
+- ✅ **自动清理**：自动删除旧备份文件，只保留最新的N个
+- ✅ **备份完整性验证**：验证生成的备份文件是否完整
+- ✅ **失败备份清理**：自动清理大小为0的失败备份文件
 
 ## 安装和配置
 
@@ -23,46 +23,24 @@ sudo cp data_backup_optimized.sh /usr/local/bin/
 sudo chmod +x /usr/local/bin/data_backup_optimized.sh
 
 # 创建必要的目录
-sudo mkdir -p /opt/soft/data /data01 /var/log
+sudo mkdir -p /opt/docker-sh/app/ /data01/docker-sh/app/ /data01/docker-sh/log/
 ```
 
-### 2. 环境变量配置
+### 2. 脚本配置
 
-建议在`/etc/profile.d/backup.sh`中设置环境变量：
+脚本的配置参数位于脚本内部，可直接编辑脚本进行修改：
 
 ```bash
-# 备份配置
-export SOURCE_DIR="/opt/soft/data"           # 源目录
-export BACKUP_DIR="/data01"                  # 备份目录
-export LOG_FILE="/var/log/data_backup.log"   # 日志文件
-export RETENTION_DAYS=7                      # 保留天数
-export MAX_LOG_SIZE=10485760                 # 日志文件最大大小(字节)
+# 编辑脚本
+vi /usr/local/bin/data_backup_optimized.sh
 
-# 安全配置（重要！）
-export BACKUP_ENCRYPTION_PASSWORD="your_strong_password_here"
+# 修改以下配置参数
+SOURCE_DIR="/opt/docker-sh/app/"           # 源目录
+BACKUP_DIR="/data01/docker-sh/app/"          # 备份目录
+LOG_FILE="/data01/docker-sh/log/app_backup.log"   # 日志文件
+KEEP_BACKUPS=2                               # 保留的备份文件数量
+MIN_FREE_SPACE_GB=300                        # 最小可用空间（GB）
 ```
-
-### 3. 密码安全建议
-
-**重要**：不要在脚本中硬编码密码！
-
-推荐的密码管理方式：
-
-1. **环境变量**（推荐）：
-   ```bash
-   export BACKUP_ENCRYPTION_PASSWORD="$(openssl rand -base64 32)"
-   ```
-
-2. **配置文件**（权限600）：
-   ```bash
-   # /etc/backup.conf (权限设置为600)
-   BACKUP_ENCRYPTION_PASSWORD="your_password"
-   ```
-
-3. **密码管理器**：
-   ```bash
-   export BACKUP_ENCRYPTION_PASSWORD="$(pass show backup/password)"
-   ```
 
 ## 使用方法
 
@@ -71,10 +49,6 @@ export BACKUP_ENCRYPTION_PASSWORD="your_strong_password_here"
 ```bash
 # 直接执行脚本
 sudo /usr/local/bin/data_backup_optimized.sh
-
-# 或者设置环境变量后执行
-export BACKUP_ENCRYPTION_PASSWORD="your_password"
-sudo -E /usr/local/bin/data_backup_optimized.sh
 ```
 
 ### 定时任务配置
@@ -92,45 +66,22 @@ sudo crontab -e
 0 2 * * * /usr/local/bin/data_backup_optimized.sh >/dev/null 2>&1
 ```
 
-### 高级配置
-
-支持的环境变量：
-
-| 变量名 | 说明 | 默认值 |
-|--------|------|--------|
-| SOURCE_DIR | 源目录路径 | /opt/soft/data |
-| BACKUP_DIR | 备份目录路径 | /data01 |
-| LOG_FILE | 日志文件路径 | /var/log/data_backup.log |
-| RETENTION_DAYS | 备份保留天数 | 7 |
-| MAX_LOG_SIZE | 日志文件最大大小 | 10485760 (10MB) |
-| BACKUP_ENCRYPTION_PASSWORD | 加密密码 | 必需设置 |
-
 ## 备份文件管理
 
 ### 备份文件命名
 
 备份文件采用以下命名格式：
 ```
-data_backup_YYYYMMDD_HHMMSS.tar.gz.enc
+data_backup_YYYYMMDD_HHMMSS.tar.gz
 ```
 
-例如：`data_backup_20240702_143022.tar.gz.enc`
-
-### 解密备份文件
-
-```bash
-# 解密备份文件
-openssl enc -aes-256-cbc -d -in data_backup_20240702_143022.tar.gz.enc -out decrypted_backup.tar.gz -pass pass:'your_password'
-
-# 解压解密后的文件
-tar -xzf decrypted_backup.tar.gz
-```
+例如：`data_backup_20250702_143022.tar.gz`
 
 ### 验证备份完整性
 
 ```bash
-# 检查加密文件是否完整
-openssl enc -aes-256-cbc -d -in backup.tar.gz.enc -pass pass:'password' | tar -tzf - >/dev/null 2>&1
+# 检查备份文件是否完整
+tar -tzf /data01/docker-sh/app/data_backup_20250702_143022.tar.gz > /dev/null 2>&1
 
 # 如果命令成功执行，说明文件完整
 if [ $? -eq 0 ]; then
@@ -140,71 +91,83 @@ else
 fi
 ```
 
+### 手动清理旧备份
+
+```bash
+# 手动清理旧备份（保留最新的3个）
+find /data01/docker-sh/app/ -name "data_backup_*.tar.gz" -type f -printf '%T@ %p\n' | \
+    sort -n | \
+    head -n -3 | \
+    cut -d' ' -f2- | \
+    xargs rm -f
+```
+
 ## 监控和故障排除
 
 ### 查看日志
 
 ```bash
 # 查看最新日志
-tail -f /var/log/data_backup.log
+tail -f /data01/docker-sh/log/app_backup.log
 
 # 查看错误日志
-grep "ERROR" /var/log/data_backup.log
+grep "ERROR" /data01/docker-sh/log/app_backup.log
 
-# 查看最近7天的备份记录
-grep "备份成功" /var/log/data_backup.log | tail -7
+# 查看最近的备份记录
+grep "备份成功" /data01/docker-sh/log/app_backup.log
 ```
 
 ### 常见问题和解决方案
 
 #### 1. 权限问题
 
-**问题**：`错误：没有备份目录的写权限`
+**问题**：`错误：备份目录 /data01/docker-sh/app/ 不存在！`
 
 **解决**：
 ```bash
-sudo chown root:root /data01
-sudo chmod 755 /data01
+sudo mkdir -p /data01/docker-sh/app/
+sudo chown root:root /data01/docker-sh/app/
+sudo chmod 755 /data01/docker-sh/app/
 ```
 
 #### 2. 磁盘空间不足
 
-**问题**：`磁盘空间可能不足`
+**问题**：`错误：清理后空间仍不足，无法完成备份！`
 
 **解决**：
 ```bash
 # 检查磁盘空间
 df -h /data01
 
-# 手动清理旧备份
-find /data01 -name "data_backup_*.tar.gz.enc" -mtime +3 -delete
+# 手动清理更多旧备份
+find /data01/docker-sh/app/ -name "data_backup_*.tar.gz" -type f -printf '%T@ %p\n' | \
+    sort -n | \
+    head -n -1 | \
+    cut -d' ' -f2- | \
+    xargs rm -f
 ```
 
-#### 3. 缺少依赖
+#### 3. 源目录不存在
 
-**问题**：`错误：缺少必需的命令 'openssl'`
+**问题**：`错误：源目录 /opt/docker-sh/app/ 不存在！`
 
 **解决**：
 ```bash
-# Ubuntu/Debian
-sudo apt-get install openssl coreutils
+# 检查源目录是否存在
+ls -la /opt/docker-sh/app/
 
-# CentOS/RHEL
-sudo yum install openssl coreutils
+# 如果不存在，创建源目录
+mkdir -p /opt/docker-sh/app/
 ```
 
-#### 4. 密码问题
+## 脚本工作流程
 
-**问题**：`错误：未设置加密密码！`
-
-**解决**：
-```bash
-# 设置环境变量
-export BACKUP_ENCRYPTION_PASSWORD="your_secure_password"
-
-# 验证设置
-echo $BACKUP_ENCRYPTION_PASSWORD
-```
+1. **清理失败的备份文件**：自动删除大小为0的备份文件
+2. **清理旧备份文件**：只保留最新的N个备份文件
+3. **检查磁盘空间**：验证备份目录是否有足够的可用空间
+4. **开始备份**：使用tar命令进行压缩备份
+5. **验证备份完整性**：检查生成的备份文件是否完整
+6. **最终清理**：确保备份文件数量不超过保留限制
 
 ## 性能优化
 
@@ -214,48 +177,18 @@ echo $BACKUP_ENCRYPTION_PASSWORD
 
 1. **使用pigz进行并行压缩**（如果可用）：
    ```bash
-   # 修改备份命令
-   tar -I pigz -cf backup.tar.gz /source/dir
+   # 修改脚本中的备份命令
+   tar -I pigz -cf "${BACKUP_DIR}/${BACKUP_FILENAME}" "${SOURCE_DIR}"
    ```
 
-2. **分卷备份**：
+2. **降低备份任务的优先级**：
    ```bash
-   # 分卷为100MB的文件
-   tar -czf - /source/dir | split -b 100m - backup.tar.gz.part.
-   ```
-
-### 备份时间优化
-
-1. **使用nice降低CPU优先级**：
-   ```bash
+   # 使用nice降低CPU优先级
    nice -n 19 /usr/local/bin/data_backup_optimized.sh
-   ```
-
-2. **使用ionice降低I/O优先级**：
-   ```bash
+   
+   # 使用ionice降低I/O优先级
    ionice -c 3 /usr/local/bin/data_backup_optimized.sh
    ```
-
-## 安全最佳实践
-
-1. **密码管理**
-   - 使用强密码（至少16位，包含大小写字母、数字、特殊字符）
-   - 定期更换密码
-   - 不要在版本控制系统中存储密码
-
-2. **文件权限**
-   - 备份脚本权限：755
-   - 配置文件权限：600
-   - 备份文件权限：640
-
-3. **网络安全**
-   - 如果备份到远程位置，使用安全的传输协议（如scp、rsync over ssh）
-   - 考虑使用VPN或专用网络进行备份传输
-
-4. **定期测试**
-   - 定期验证备份文件的完整性
-   - 定期测试恢复过程
-   - 记录恢复时间和步骤
 
 ## 恢复流程
 
@@ -263,26 +196,16 @@ echo $BACKUP_ENCRYPTION_PASSWORD
 
 1. **找到最新的备份文件**：
    ```bash
-   ls -lt /data01/data_backup_*.tar.gz.enc | head -1
+   ls -lt /data01/docker-sh/app/data_backup_*.tar.gz | head -1
    ```
 
-2. **解密备份文件**：
-   ```bash
-   openssl enc -aes-256-cbc -d -in backup.tar.gz.enc -out backup.tar.gz -pass pass:'password'
-   ```
-
-3. **验证解密文件**：
-   ```bash
-   tar -tzf backup.tar.gz >/dev/null 2>&1 && echo "文件有效" || echo "文件损坏"
-   ```
-
-4. **解压到指定位置**：
+2. **解压备份文件**：
    ```bash
    # 解压到原始位置
-   sudo tar -xzf backup.tar.gz -C /opt/soft/
+sudo tar -xzf /data01/docker-sh/app/data_backup_20250702_143022.tar.gz -C /
    
    # 或者解压到临时位置
-   sudo tar -xzf backup.tar.gz -C /tmp/
+sudo tar -xzf /data01/docker-sh/app/data_backup_20250702_143022.tar.gz -C /tmp/
    ```
 
 ## 更新和维护
@@ -302,10 +225,9 @@ sudo chmod +x /usr/local/bin/data_backup_optimized.sh
 
 - [ ] 检查磁盘空间使用情况
 - [ ] 验证备份文件完整性
-- [ ] 检查日志文件大小
+- [ ] 检查日志文件内容
 - [ ] 测试恢复流程
-- [ ] 更新密码（建议每3-6个月）
-- [ ] 检查定时任务状态
+- [ ] 根据需要调整保留的备份数量
 
 ## 技术支持
 
@@ -313,11 +235,10 @@ sudo chmod +x /usr/local/bin/data_backup_optimized.sh
 
 1. 操作系统版本：`lsb_release -a`
 2. 脚本版本：查看脚本头部的版本信息
-3. 错误日志：`grep ERROR /var/log/data_backup.log`
-4. 系统资源：`df -h` 和 `free -h`
-5. 相关配置文件内容
+3. 错误日志：`grep ERROR /data01/docker-sh/log/app_backup.log`
+4. 系统资源：`df -h /data01`
 
 ---
 
-**最后更新**：2025年11月14日  
+**最后更新**：2025-12-06  
 **脚本版本**：2.0
