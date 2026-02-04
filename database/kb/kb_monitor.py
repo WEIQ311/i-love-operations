@@ -114,7 +114,7 @@ class KingbaseMonitor:
                     extract(epoch from now() - pg_postmaster_start_time()) as uptime
                 FROM pg_stat_database
                 WHERE datname = %s
-            """, (KB_DATABASE,))
+            """, (self.database,))
             
             result = self.cursor.fetchone()
             if result:
@@ -163,7 +163,7 @@ class KingbaseMonitor:
                     blks_read
                 FROM pg_stat_database
                 WHERE datname = %s
-            """, (KB_DATABASE,))
+            """, (self.database,))
             
             result = self.cursor.fetchone()
             if result:
@@ -188,7 +188,9 @@ class KingbaseMonitor:
                 SELECT 
                     spcname as tablespace,
                     pg_size_pretty(pg_tablespace_size(spcname)) as size,
-                    pg_tablespace_size(spcname) as size_bytes
+                    pg_tablespace_size(spcname) as size_bytes,
+                    pg_size_pretty(pg_tablespace_size(spcname) - pg_tablespace_free_size(spcname)) as used_size,
+                    pg_tablespace_size(spcname) - pg_tablespace_free_size(spcname) as used_bytes
                 FROM pg_tablespace
                 WHERE spcname NOT LIKE 'pg_%'
                 ORDER BY size_bytes DESC
@@ -196,10 +198,21 @@ class KingbaseMonitor:
             
             tablespaces = []
             for row in self.cursor.fetchall():
+                tablespace = row[0]
+                size = row[1]
+                size_bytes = row[2]
+                used_size = row[3]
+                used_bytes = row[4]
+                
+                usage_percent = (used_bytes / size_bytes * 100) if size_bytes > 0 else 0
+                
                 tablespaces.append({
-                    'tablespace': row[0],
-                    'size': row[1],
-                    'size_bytes': row[2]
+                    'tablespace': tablespace,
+                    'size': size,
+                    'size_bytes': size_bytes,
+                    'used_size': used_size,
+                    'used_bytes': used_bytes,
+                    'usage_percent': usage_percent
                 })
             
             return tablespaces

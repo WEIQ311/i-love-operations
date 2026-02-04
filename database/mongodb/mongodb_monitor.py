@@ -2,6 +2,7 @@
 import os
 import time
 import json
+import pymongo
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -133,13 +134,26 @@ class MongoDBMonitor:
             get_param_result = self.db.command('getParameter', 1, slowms=1)
             slowms = get_param_result.get('slowms', 100)
             
-            # 获取慢查询数（需要启用慢查询日志）
-            # 这里简化处理，实际生产环境中需要查询system.profile集合
+            # 尝试从system.profile集合查询慢查询
             slow_query_count = 0
+            try:
+                # 检查是否存在system.profile集合
+                if 'system.profile' in self.db.list_collection_names():
+                    # 查询最近60秒内的慢查询
+                    start_time = time.time() - 60
+                    slow_query_count = self.db.system.profile.count_documents({
+                        'millis': {'$gt': slowms},
+                        'ts': {'$gt': start_time}
+                    })
+                else:
+                    print("[INFO] system.profile集合不存在，请启用慢查询日志: db.setProfilingLevel(1, {slowms})")
+            except Exception as profile_error:
+                print(f"[INFO] 查询system.profile失败: {profile_error}")
             
             return {
                 'slow_queries': slow_query_count,
-                'slow_query_threshold': slowms / 1000  # 转换为秒
+                'slow_query_threshold': slowms / 1000,  # 转换为秒
+                'profiling_enabled': 'system.profile' in self.db.list_collection_names()
             }
         except Exception as e:
             print(f"[ERROR] 获取慢查询信息失败: {e}")
@@ -182,21 +196,30 @@ class MongoDBMonitor:
             storage_size_mb = db_stats.get('storageSize', 0) / (1024 * 1024)
             index_size_mb = db_stats.get('indexSize', 0) / (1024 * 1024)
             
+            # 计算使用百分比（数据大小/存储大小）
+            usage_percent = (total_size_mb / storage_size_mb * 100) if storage_size_mb > 0 else 0
+            
             # 获取所有集合的大小
             collections = []
             for coll_name in self.db.list_collection_names():
                 coll_stats = self.db.command('collStats', coll_name)
+                coll_size_mb = coll_stats.get('size', 0) / (1024 * 1024)
+                coll_storage_mb = coll_stats.get('storageSize', 0) / (1024 * 1024)
+                coll_usage_percent = (coll_size_mb / coll_storage_mb * 100) if coll_storage_mb > 0 else 0
+                
                 collections.append({
                     'collection': coll_name,
-                    'size_mb': coll_stats.get('size', 0) / (1024 * 1024),
-                    'storage_size_mb': coll_stats.get('storageSize', 0) / (1024 * 1024),
+                    'size_mb': coll_size_mb,
+                    'storage_size_mb': coll_storage_mb,
+                    'usage_percent': coll_usage_percent,
                     'index_size_mb': coll_stats.get('totalIndexSize', 0) / (1024 * 1024)
                 })
             
             return {
-                'database': MONGO_DATABASE,
+                'database': self.database,
                 'total_size_mb': total_size_mb,
                 'storage_size_mb': storage_size_mb,
+                'usage_percent': usage_percent,
                 'index_size_mb': index_size_mb,
                 'collections': collections
             }

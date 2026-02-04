@@ -114,7 +114,7 @@ class PostgreSQLMonitor:
                     extract(epoch from now() - pg_postmaster_start_time()) as uptime
                 FROM pg_stat_database
                 WHERE datname = %s
-            """, (POSTGRES_DATABASE,))
+            """, (self.database,))
             
             result = self.cursor.fetchone()
             if result:
@@ -140,13 +140,33 @@ class PostgreSQLMonitor:
             self.cursor.execute("SHOW log_min_duration_statement")
             log_min_duration = self.cursor.fetchone()[0]
             
-            # 获取当前慢查询数（如果启用了慢查询日志）
-            # 注意：PostgreSQL需要配置log_min_duration_statement来记录慢查询
-            slow_query_count = 0
+            # 获取当前正在执行的慢查询（基于设置的慢查询阈值）
+            # 尝试将log_min_duration转换为秒
+            slow_query_threshold = 1  # 默认1秒
+            try:
+                if log_min_duration.endswith('ms'):
+                    slow_query_threshold = int(log_min_duration[:-2]) / 1000
+                elif log_min_duration == '0':
+                    slow_query_threshold = 0
+                else:
+                    slow_query_threshold = int(log_min_duration)
+            except:
+                pass
+            
+            # 查询正在执行且超过阈值的查询
+            self.cursor.execute("""
+                SELECT count(*)
+                FROM pg_stat_activity 
+                WHERE state = 'active' 
+                AND now() - query_start > interval '%s second'
+                AND query NOT LIKE '%%pg_stat_activity%%'
+            """, (slow_query_threshold,))
+            slow_query_count = int(self.cursor.fetchone()[0])
             
             return {
                 'slow_queries': slow_query_count,
-                'log_min_duration_statement': log_min_duration
+                'log_min_duration_statement': log_min_duration,
+                'slow_query_threshold': slow_query_threshold
             }
         except Exception as e:
             print(f"[ERROR] 获取慢查询信息失败: {e}")
@@ -188,7 +208,9 @@ class PostgreSQLMonitor:
                 SELECT 
                     spcname as tablespace,
                     pg_size_pretty(pg_tablespace_size(spcname)) as size,
-                    pg_tablespace_size(spcname) as size_bytes
+                    pg_tablespace_size(spcname) as size_bytes,
+                    pg_size_pretty(pg_tablespace_size(spcname) - pg_tablespace_free_size(spcname)) as used_size,
+                    pg_tablespace_size(spcname) - pg_tablespace_free_size(spcname) as used_bytes
                 FROM pg_tablespace
                 WHERE spcname NOT LIKE 'pg_%'
                 ORDER BY size_bytes DESC
@@ -199,11 +221,18 @@ class PostgreSQLMonitor:
                 tablespace = row[0]
                 size = row[1]
                 size_bytes = row[2]
+                used_size = row[3]
+                used_bytes = row[4]
+                
+                usage_percent = (used_bytes / size_bytes * 100) if size_bytes > 0 else 0
                 
                 tablespaces.append({
                     'tablespace': tablespace,
                     'size': size,
-                    'size_bytes': size_bytes
+                    'size_bytes': size_bytes,
+                    'used_size': used_size,
+                    'used_bytes': used_bytes,
+                    'usage_percent': usage_percent
                 })
             
             return tablespaces
