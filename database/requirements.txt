@@ -10,7 +10,7 @@ pymysql
 psycopg2-binary
 
 # Oracle
-cx-Oracle
+oracledb
 
 # SQL Server
 pyodbc
@@ -18,4 +18,6 @@ pyodbc
 # MongoDB
 pymongo
 
-# 达梦数据库需要单独安装 dmPython 驱动
+# 达梦数据库
+dmPython
+dmPython

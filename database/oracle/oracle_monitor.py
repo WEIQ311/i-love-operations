@@ -2,7 +2,7 @@
 import os
 import time
 import json
-import cx_Oracle
+import oracledb
 from dotenv import load_dotenv
 
 # 加载配置文件
@@ -45,8 +45,8 @@ class OracleMonitor:
     def connect(self):
         """连接到Oracle数据库"""
         try:
-            dsn = cx_Oracle.makedsn(self.host, self.port, sid=self.sid)
-            self.conn = cx_Oracle.connect(
+            dsn = oracledb.makedsn(self.host, self.port, sid=self.sid)
+            self.conn = oracledb.connect(
                 user=self.user,
                 password=self.password,
                 dsn=dsn
