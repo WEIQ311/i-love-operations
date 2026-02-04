@@ -138,17 +138,20 @@ class DatabaseScheduler:
             module = importlib.import_module(module_path)
             monitor_class = getattr(module, class_name)
             
-            # 创建监控实例并传递配置
-            monitor = monitor_class(config=db_config)
+            # 创建监控实例并传递配置和实例名称
+            monitor = monitor_class(config=db_config, instance_name=db_name)
             
-            # 确保监控目录存在
-            monitor_dir = os.path.join(os.path.dirname(os.path.abspath(module.__file__)), 'monitor')
-            if not os.path.exists(monitor_dir):
-                os.makedirs(monitor_dir)
-                logger.info(f"创建监控目录: {monitor_dir}")
+            # 确保统一监控目录存在，并按日期分目录
+            import datetime
+            current_date = datetime.datetime.now().strftime('%Y-%m-%d')
+            monitor_root_dir = os.path.join(os.path.dirname(__file__), 'monitor')
+            monitor_date_dir = os.path.join(monitor_root_dir, current_date)
+            if not os.path.exists(monitor_date_dir):
+                os.makedirs(monitor_date_dir)
+                logger.info(f"创建监控目录: {monitor_date_dir}")
             
-            # 运行监控
-            monitor.run_monitor()
+            # 运行监控，传递统一的存储目录
+            monitor.run_monitor(monitor_dir=monitor_date_dir)
             
             logger.info(f"监控数据库实例完成: {db_name} ({db_type})")
             return True

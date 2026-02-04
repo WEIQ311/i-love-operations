@@ -30,11 +30,12 @@ ALERT_ENABLED = os.getenv('ALERT_ENABLED', 'true').lower() == 'true'
 ALERT_EMAIL = os.getenv('ALERT_EMAIL', 'admin@example.com')
 
 class PostgreSQLMonitor:
-    def __init__(self, config=None):
+    def __init__(self, config=None, instance_name=None):
         self.conn = None
         self.cursor = None
         # 使用传入的配置或环境变量
         self.config = config or {}
+        self.instance_name = instance_name
         self.host = self.config.get('host', POSTGRES_HOST)
         self.port = self.config.get('port', POSTGRES_PORT)
         self.user = self.config.get('user', POSTGRES_USER)
@@ -351,6 +352,7 @@ class PostgreSQLMonitor:
             monitor_data = {
                 'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
                 'monitor_time': time.time(),
+                'instance_name': self.instance_name,
                 'stats': self._convert_decimal_to_float(stats),
                 'alerts': self._convert_decimal_to_float(alerts),
                 'thresholds': {
@@ -362,9 +364,13 @@ class PostgreSQLMonitor:
                 }
             }
             
-            # 生成文件名，包含时间戳
-            file_name = f"postgresql_monitor_{time.strftime('%Y%m%d_%H%M%S')}.json"
-            file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'monitor', file_name)
+            # 生成文件名，包含实例名称和时间戳
+            file_name = f"{self.instance_name}_{time.strftime('%Y%m%d_%H%M%S')}.json"
+            # 使用传递的监控目录或默认目录
+            if self.monitor_dir:
+                file_path = os.path.join(self.monitor_dir, file_name)
+            else:
+                file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'monitor', file_name)
             
             # 写入JSON文件
             with open(file_path, 'w', encoding='utf-8') as f:
@@ -374,9 +380,10 @@ class PostgreSQLMonitor:
         except Exception as e:
             print(f"[ERROR] 保存监控结果到JSON文件失败: {e}")
     
-    def run_monitor(self):
+    def run_monitor(self, monitor_dir=None):
         """运行监控"""
         print(f"\n[INFO] 开始监控 - {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        self.monitor_dir = monitor_dir
         
         # 初始化监控数据
         stats = {

@@ -1,0 +1,21 @@
+# 数据库监控统一依赖
+
+# 基本依赖
+python-dotenv
+
+# MySQL
+pymysql
+
+# PostgreSQL/金仓
+psycopg2-binary
+
+# Oracle
+cx-Oracle
+
+# SQL Server
+pyodbc
+
+# MongoDB
+pymongo
+
+# 达梦数据库需要单独安装 dmPython 驱动
