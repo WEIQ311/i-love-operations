@@ -30,21 +30,28 @@ ALERT_ENABLED = os.getenv('ALERT_ENABLED', 'true').lower() == 'true'
 ALERT_EMAIL = os.getenv('ALERT_EMAIL', 'admin@example.com')
 
 class OracleMonitor:
-    def __init__(self):
+    def __init__(self, config=None):
         self.conn = None
         self.cursor = None
+        # 使用传入的配置或环境变量
+        self.config = config or {}
+        self.host = self.config.get('host', ORACLE_HOST)
+        self.port = self.config.get('port', ORACLE_PORT)
+        self.user = self.config.get('user', ORACLE_USER)
+        self.password = self.config.get('password', ORACLE_PASSWORD)
+        self.sid = self.config.get('sid', ORACLE_SID)
     
     def connect(self):
         """连接到Oracle数据库"""
         try:
-            dsn = cx_Oracle.makedsn(ORACLE_HOST, ORACLE_PORT, sid=ORACLE_SID)
+            dsn = cx_Oracle.makedsn(self.host, self.port, sid=self.sid)
             self.conn = cx_Oracle.connect(
-                user=ORACLE_USER,
-                password=ORACLE_PASSWORD,
+                user=self.user,
+                password=self.password,
                 dsn=dsn
             )
             self.cursor = self.conn.cursor()
-            print(f"[INFO] 成功连接到Oracle数据库: {ORACLE_HOST}:{ORACLE_PORT}/{ORACLE_SID}")
+            print(f"[INFO] 成功连接到Oracle数据库: {self.host}:{self.port}/{self.sid}")
             return True
         except Exception as e:
             print(f"[ERROR] 连接Oracle数据库失败: {e}")

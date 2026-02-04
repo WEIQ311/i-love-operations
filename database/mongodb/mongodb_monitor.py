@@ -30,26 +30,33 @@ ALERT_ENABLED = os.getenv('ALERT_ENABLED', 'true').lower() == 'true'
 ALERT_EMAIL = os.getenv('ALERT_EMAIL', 'admin@example.com')
 
 class MongoDBMonitor:
-    def __init__(self):
+    def __init__(self, config=None):
         self.client = None
         self.db = None
+        # 使用传入的配置或环境变量
+        self.config = config or {}
+        self.host = self.config.get('host', MONGO_HOST)
+        self.port = self.config.get('port', MONGO_PORT)
+        self.user = self.config.get('user', MONGO_USER)
+        self.password = self.config.get('password', MONGO_PASSWORD)
+        self.database = self.config.get('database', MONGO_DATABASE)
     
     def connect(self):
         """连接到MongoDB数据库"""
         try:
-            if MONGO_USER and MONGO_PASSWORD:
+            if self.user and self.password:
                 # 带认证的连接
-                conn_str = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/"
+                mongo_uri = f"mongodb://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}?authSource=admin"
             else:
                 # 无认证的连接
-                conn_str = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/"
+                mongo_uri = f"mongodb://{self.host}:{self.port}/{self.database}"
             
-            self.client = MongoClient(conn_str)
-            self.db = self.client[MONGO_DATABASE]
+            self.client = pymongo.MongoClient(mongo_uri)
+            self.db = self.client[self.database]
             
             # 测试连接
-            self.db.command('ping')
-            print(f"[INFO] 成功连接到MongoDB数据库: {MONGO_HOST}:{MONGO_PORT}")
+            self.client.admin.command('ping')
+            print(f"[INFO] 成功连接到MongoDB数据库: {self.host}:{self.port}")
             return True
         except Exception as e:
             print(f"[ERROR] 连接MongoDB数据库失败: {e}")

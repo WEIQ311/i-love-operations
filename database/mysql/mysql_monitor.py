@@ -30,24 +30,31 @@ ALERT_ENABLED = os.getenv('ALERT_ENABLED', 'true').lower() == 'true'
 ALERT_EMAIL = os.getenv('ALERT_EMAIL', 'admin@example.com')
 
 class MySQLMonitor:
-    def __init__(self):
+    def __init__(self, config=None):
         self.conn = None
         self.cursor = None
+        # 使用传入的配置或环境变量
+        self.config = config or {}
+        self.host = self.config.get('host', MYSQL_HOST)
+        self.port = self.config.get('port', MYSQL_PORT)
+        self.user = self.config.get('user', MYSQL_USER)
+        self.password = self.config.get('password', MYSQL_PASSWORD)
+        self.database = self.config.get('database', MYSQL_DATABASE)
     
     def connect(self):
         """连接到MySQL数据库"""
         try:
             self.conn = pymysql.connect(
-                host=MYSQL_HOST,
-                port=MYSQL_PORT,
-                user=MYSQL_USER,
-                password=MYSQL_PASSWORD,
-                database=MYSQL_DATABASE,
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password,
+                database=self.database,
                 charset='utf8mb4',
                 cursorclass=pymysql.cursors.DictCursor
             )
             self.cursor = self.conn.cursor()
-            print(f"[INFO] 成功连接到MySQL数据库: {MYSQL_HOST}:{MYSQL_PORT}")
+            print(f"[INFO] 成功连接到MySQL数据库: {self.host}:{self.port}")
             return True
         except Exception as e:
             print(f"[ERROR] 连接MySQL数据库失败: {e}")

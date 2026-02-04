@@ -30,22 +30,29 @@ ALERT_ENABLED = os.getenv('ALERT_ENABLED', 'true').lower() == 'true'
 ALERT_EMAIL = os.getenv('ALERT_EMAIL', 'admin@example.com')
 
 class DMMonitor:
-    def __init__(self):
+    def __init__(self, config=None):
         self.conn = None
         self.cursor = None
+        # 使用传入的配置或环境变量
+        self.config = config or {}
+        self.host = self.config.get('host', DM_HOST)
+        self.port = self.config.get('port', DM_PORT)
+        self.user = self.config.get('user', DM_USER)
+        self.password = self.config.get('password', DM_PASSWORD)
+        self.database = self.config.get('database', DM_DATABASE)
     
     def connect(self):
         """连接到达梦数据库"""
         try:
             self.conn = dmPython.connect(
-                host=DM_HOST,
-                port=DM_PORT,
-                user=DM_USER,
-                password=DM_PASSWORD,
-                database=DM_DATABASE
+                user=self.user,
+                password=self.password,
+                server=self.host,
+                port=self.port,
+                database=self.database
             )
             self.cursor = self.conn.cursor()
-            print(f"[INFO] 成功连接到达梦数据库: {DM_HOST}:{DM_PORT}")
+            print(f"[INFO] 成功连接到达梦数据库: {self.host}:{self.port}")
             return True
         except Exception as e:
             print(f"[ERROR] 连接达梦数据库失败: {e}")

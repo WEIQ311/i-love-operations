@@ -30,22 +30,29 @@ ALERT_ENABLED = os.getenv('ALERT_ENABLED', 'true').lower() == 'true'
 ALERT_EMAIL = os.getenv('ALERT_EMAIL', 'admin@example.com')
 
 class KingbaseMonitor:
-    def __init__(self):
+    def __init__(self, config=None):
         self.conn = None
         self.cursor = None
+        # 使用传入的配置或环境变量
+        self.config = config or {}
+        self.host = self.config.get('host', KB_HOST)
+        self.port = self.config.get('port', KB_PORT)
+        self.user = self.config.get('user', KB_USER)
+        self.password = self.config.get('password', KB_PASSWORD)
+        self.database = self.config.get('database', KB_DATABASE)
     
     def connect(self):
         """连接到Kingbase数据库"""
         try:
             self.conn = psycopg2.connect(
-                host=KB_HOST,
-                port=KB_PORT,
-                user=KB_USER,
-                password=KB_PASSWORD,
-                database=KB_DATABASE
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password,
+                database=self.database
             )
             self.cursor = self.conn.cursor()
-            print(f"[INFO] 成功连接到Kingbase数据库: {KB_HOST}:{KB_PORT}")
+            print(f"[INFO] 成功连接到Kingbase数据库: {self.host}:{self.port}")
             return True
         except Exception as e:
             print(f"[ERROR] 连接Kingbase数据库失败: {e}")

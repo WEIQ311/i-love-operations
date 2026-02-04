@@ -30,22 +30,29 @@ ALERT_ENABLED = os.getenv('ALERT_ENABLED', 'true').lower() == 'true'
 ALERT_EMAIL = os.getenv('ALERT_EMAIL', 'admin@example.com')
 
 class PostgreSQLMonitor:
-    def __init__(self):
+    def __init__(self, config=None):
         self.conn = None
         self.cursor = None
+        # 使用传入的配置或环境变量
+        self.config = config or {}
+        self.host = self.config.get('host', POSTGRES_HOST)
+        self.port = self.config.get('port', POSTGRES_PORT)
+        self.user = self.config.get('user', POSTGRES_USER)
+        self.password = self.config.get('password', POSTGRES_PASSWORD)
+        self.database = self.config.get('database', POSTGRES_DATABASE)
     
     def connect(self):
         """连接到PostgreSQL数据库"""
         try:
             self.conn = psycopg2.connect(
-                host=POSTGRES_HOST,
-                port=POSTGRES_PORT,
-                user=POSTGRES_USER,
-                password=POSTGRES_PASSWORD,
-                database=POSTGRES_DATABASE
+                host=self.host,
+                port=self.port,
+                user=self.user,
+                password=self.password,
+                database=self.database
             )
             self.cursor = self.conn.cursor()
-            print(f"[INFO] 成功连接到PostgreSQL数据库: {POSTGRES_HOST}:{POSTGRES_PORT}")
+            print(f"[INFO] 成功连接到PostgreSQL数据库: {self.host}:{self.port}")
             return True
         except Exception as e:
             print(f"[ERROR] 连接PostgreSQL数据库失败: {e}")
