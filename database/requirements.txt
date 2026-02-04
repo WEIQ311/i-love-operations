@@ -20,4 +20,3 @@ pymongo
 
 # 达梦数据库
 dmPython
-dmPython
