@@ -18,12 +18,18 @@ class BackendMonitor:
         else:
             self.endpoints = endpoints
         
-        self.data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'backend')
-        self.log_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'logs')
+        # 确保使用正确的路径
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        self.data_dir = os.path.join(base_dir, 'monitor', 'data', 'backend')
+        self.log_dir = os.path.join(base_dir, 'monitor', 'logs')
+        
+        print(f"数据目录: {self.data_dir}")
+        print(f"日志目录: {self.log_dir}")
         
         # 创建数据目录
         os.makedirs(self.data_dir, exist_ok=True)
         os.makedirs(self.log_dir, exist_ok=True)
+        print(f"目录创建成功: {os.path.exists(self.data_dir)}")
     
     def test_endpoint(self, endpoint):
         """测试单个API端点"""
@@ -156,21 +162,40 @@ class BackendMonitor:
         date_str = datetime.now().strftime('%Y-%m-%d')
         file_path = os.path.join(self.data_dir, f'backend_metrics_{date_str}.json')
         
-        # 读取现有数据
-        existing_data = []
-        if os.path.exists(file_path):
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    existing_data = json.load(f)
-            except Exception as e:
-                pass
+        print(f"保存路径: {file_path}")
+        print(f"目录是否存在: {os.path.exists(self.data_dir)}")
+        print(f"文件是否存在: {os.path.exists(file_path)}")
         
-        # 添加新数据
-        existing_data.append(metrics)
-        
-        # 保存数据
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(existing_data, f, ensure_ascii=False, indent=2)
+        try:
+            # 确保目录存在
+            if not os.path.exists(self.data_dir):
+                print(f"创建目录: {self.data_dir}")
+                os.makedirs(self.data_dir, exist_ok=True)
+                print(f"目录创建结果: {os.path.exists(self.data_dir)}")
+            
+            # 读取现有数据
+            existing_data = []
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        existing_data = json.load(f)
+                    print(f"读取现有数据成功，共 {len(existing_data)} 条")
+                except Exception as e:
+                    print(f"读取现有数据失败: {e}")
+            
+            # 添加新数据
+            existing_data.append(metrics)
+            print(f"添加新数据后，共 {len(existing_data)} 条")
+            
+            # 保存数据
+            print(f"开始保存数据到: {file_path}")
+            with open(file_path, 'w', encoding='utf-8') as f:
+                json.dump(existing_data, f, ensure_ascii=False, indent=2)
+            print("保存数据成功")
+        except Exception as e:
+            print(f"保存数据失败: {e}")
+            import traceback
+            traceback.print_exc()
     
     def run(self, interval=60):
         """运行监控"""

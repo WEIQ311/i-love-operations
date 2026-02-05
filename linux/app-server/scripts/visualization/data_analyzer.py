@@ -6,10 +6,14 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import re
 
+# 设置matplotlib支持中文
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用黑体字体
+plt.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
+
 class DataAnalyzer:
     def __init__(self):
-        self.data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data')
-        self.output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'visualization')
+        self.data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'monitor', 'data')
+        self.output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'monitor', 'data', 'visualization')
         
         # 创建输出目录
         os.makedirs(self.output_dir, exist_ok=True)

@@ -9,8 +9,8 @@ from datetime import datetime
 class MonitorManager:
     def __init__(self):
         self.scripts_dir = os.path.join(os.path.dirname(__file__), 'scripts')
-        self.logs_dir = os.path.join(os.path.dirname(__file__), 'logs')
-        self.data_dir = os.path.join(os.path.dirname(__file__), 'data')
+        self.logs_dir = os.path.join(os.path.dirname(__file__), 'monitor', 'logs')
+        self.data_dir = os.path.join(os.path.dirname(__file__), 'monitor', 'data')
         
         # 创建必要的目录
         os.makedirs(self.logs_dir, exist_ok=True)
@@ -149,9 +149,11 @@ class MonitorManager:
     def is_process_running(self, pid):
         """检查进程是否正在运行"""
         try:
-            os.kill(pid, 0)  # 发送0信号，不做任何操作，只检查进程是否存在
-            return True
-        except OSError:
+            if isinstance(pid, int):
+                os.kill(pid, 0)  # 发送0信号，不做任何操作，只检查进程是否存在
+                return True
+            return False
+        except (OSError, SystemError):
             return False
     
     def save_pids(self):

@@ -11,8 +11,8 @@ class NginxMonitor:
     def __init__(self, stub_status_url='http://localhost/nginx_status', access_log_path='/var/log/nginx/access.log'):
         self.stub_status_url = stub_status_url
         self.access_log_path = access_log_path
-        self.data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'nginx')
-        self.log_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'logs')
+        self.data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'monitor', 'data', 'nginx')
+        self.log_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'monitor', 'logs')
         
         # 创建数据目录
         os.makedirs(self.data_dir, exist_ok=True)

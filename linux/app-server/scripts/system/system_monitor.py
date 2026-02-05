@@ -7,8 +7,8 @@ from datetime import datetime
 
 class SystemMonitor:
     def __init__(self):
-        self.data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'system')
-        self.log_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'logs')
+        self.data_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'monitor', 'data', 'system')
+        self.log_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'monitor', 'logs')
         
         # 创建数据目录
         os.makedirs(self.data_dir, exist_ok=True)
