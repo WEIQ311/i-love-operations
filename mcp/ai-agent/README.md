@@ -10,7 +10,7 @@
 
 ```bash
 conda activate algo-workspace
-cd /Users/weiqiang/work/resource/ai-agent
+cd /Users/admin/work/resource/ai-agent
 pip install -r requirements.txt
 ```
 
@@ -123,6 +123,8 @@ curl -X POST "http://127.0.0.1:8000/query" \
 - `src_tool.py`：提供给大模型的统一 tool 入口 `query_database`，以及 `QUERY_DATABASE_TOOL_SPEC` 示例。
 - `api.py`：基于 FastAPI 的 HTTP API 服务入口（`POST /query`）。
 - `main.py`：命令行入口（本地调试方便）。
+- `mcp_server.py`：基于 MCP Python SDK 的 MCP Server，暴露 `query_database_tool` 工具，供 MCP Host（如 Cursor）调用。
+- `.cursor/mcp.json`：Cursor 项目级 MCP 配置，告诉 Cursor 如何拉起本地 MCP Server。
 
 后续你可以在此基础上继续扩展，例如：
 
@@ -165,4 +167,82 @@ tools = [QUERY_DATABASE_TOOL_SPEC]
 
 - **Q：如何只在内网调用，不暴露数据库细节？**  
   **A：** 推荐在内网部署本项目的 API 服务（`uvicorn api:app ...`），只暴露 `/query` 这个接口给上层大模型服务，数据库连接信息只存在当前服务的 `.env`/环境变量中，对外部是不可见的。
+
+## 8. 作为 MCP 服务使用（上架到 Cursor 等 Host）
+
+项目已经内置了一个标准的 MCP Server：`mcp_server.py`，基于官方 Python SDK（`mcp` 包），既可以本地 stdio 方式被 Cursor 拉起，也可以作为远程 HTTP MCP 服务暴露。
+
+- **工具入口**：`query_database_tool`（内部复用 `src_tool.query_database`）
+- **传输方式**：stdio（适配 Cursor、Claude Desktop 等）
+
+### 8.1 在 Cursor 中启用本地 MCP Server
+
+项目下已经提供了 `.cursor/mcp.json`，内容类似：
+
+```json
+{
+  "mcpServers": {
+    "ai-db-agent": {
+      "command": "python",
+      "args": ["mcp_server.py"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}
+```
+
+只要你在 Cursor 中打开本项目目录：
+
+1. 确保已经安装依赖并配置好 `.env`。
+2. Cursor 会自动读取项目内的 `.cursor/mcp.json`，并在 MCP 面板中显示 `ai-db-agent`。
+3. 启用后，Cursor 内的大模型就可以直接调用该 MCP Server 暴露的 `query_database_tool` 工具。
+
+### 8.2 作为全局 MCP Server（可选）
+
+如果希望在所有项目中都能使用这个服务，可以把 `mcp_server.py` 和相应配置加入全局 `~/.cursor/mcp.json` 中，例如：
+
+```json
+{
+  "mcpServers": {
+    "ai-db-agent": {
+      "command": "python",
+      "args": ["/Users/admin/work/resource/ai-agent/mcp_server.py"]
+    }
+  }
+}
+```
+
+> 注意：全局配置下，数据库和 LLM 的环境变量依然由 `.env` 或系统环境变量控制，建议在运行用户下统一配置。
+
+### 8.3 启动远程 HTTP MCP 服务
+
+如果你希望其他机器上的 MCP Host（或自研 Agent）通过 HTTP 连接，可以这样启动：
+
+```bash
+cd /Users/weiqiang/work/resource/ai-agent
+conda activate algo-workspace
+
+# 默认以 HTTP 方式启动 MCP（0.0.0.0:8000）
+python mcp_server.py http
+```
+
+可选环境变量（覆盖默认 host/port）：
+
+```bash
+export MCP_HTTP_HOST=0.0.0.0
+export MCP_HTTP_PORT=9000
+python mcp_server.py http
+```
+
+此时会在 `http://MCP_HTTP_HOST:MCP_HTTP_PORT/mcp` 暴露一个 HTTP MCP 端点，你可以用 MCP Inspector 或其他支持 HTTP/streamable-http 的 Host 进行连接测试。
+
+### 8.4 上架 / 调试 MCP Server 的推荐流程
+
+1. 安装依赖：`pip install -r requirements.txt`（包含 `mcp`）。
+2. 配置 `.env`：填好数据库和 LLM 相关变量，并确认能通过 `python main.py` 正常查询。
+3. 如需本地（stdio）方式给 Cursor 用：直接在 Cursor 打开项目并启用 `ai-db-agent`。
+4. 如需远程 HTTP MCP：在服务器上运行 `python mcp_server.py http`，再用 MCP Inspector / 远程 Host 连接 `http://host:port/mcp`。
+
 
