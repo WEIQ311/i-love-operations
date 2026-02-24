@@ -16,10 +16,28 @@ MCP Server：将 query_database 能力暴露为 MCP tool。
 from typing import Any, Dict, Optional
 import sys
 import os
+import logging
+from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
 from src_tool import query_database
+
+
+LOG_DIR = Path(__file__).resolve().parent / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_FILE = LOG_DIR / "mcp_server.log"
+
+
+logger = logging.getLogger("ai_db_agent")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+    formatter = logging.Formatter(
+        "%(asctime)s [%(levelname)s] %(name)s - %(message)s"
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
 
 mcp = FastMCP("ai-db-agent", json_response=True)
@@ -38,11 +56,32 @@ def query_database_tool(
     - page: 页码（从 1 开始，可选）。
     - page_size: 每页大小（可选）。
     """
-    return query_database(
-        natural_language_query=natural_language_query,
-        page=page,
-        page_size=page_size,
+    logger.info(
+        "MCP call query_database_tool received: question=%r, page=%r, page_size=%r",
+        natural_language_query,
+        page,
+        page_size,
     )
+
+    try:
+        logger.info("Step 1: invoke query_database")
+        result = query_database(
+            natural_language_query=natural_language_query,
+            page=page,
+            page_size=page_size,
+        )
+
+        # 粗略记录返回行数，便于排查问题
+        rows = result.get("rows") if isinstance(result, dict) else None
+        row_count = len(rows) if isinstance(rows, list) else "unknown"
+        logger.info(
+            "Step 2: query_database finished successfully, rows=%s", row_count
+        )
+
+        return result
+    except Exception:
+        logger.exception("query_database_tool failed with exception")
+        raise
 
 
 if __name__ == "__main__":
