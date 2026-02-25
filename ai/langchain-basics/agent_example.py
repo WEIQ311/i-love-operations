@@ -27,11 +27,13 @@ else:
     tools = load_tools(["llm-math"], llm=llm)
     print("只加载了数学工具（未设置SERPAPI_API_KEY）")
 
+
 # 3. 添加自定义工具
 def get_current_time(input_str):
     """获取当前时间"""
     from datetime import datetime
     return f"当前时间是: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+
 
 # 创建自定义工具
 custom_tool = Tool(

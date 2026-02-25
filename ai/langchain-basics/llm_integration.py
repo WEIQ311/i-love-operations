@@ -34,7 +34,7 @@ if os.getenv("HUGGINGFACEHUB_API_TOKEN"):
         temperature=0.7,
         max_length=512
     )
-    
+
     result3 = hf_llm.invoke("请简要介绍LangChain")
     print(result3)
 else:
@@ -45,8 +45,8 @@ print("\n===== 模型参数调整 =====")
 # 调整模型参数
 custom_llm = get_openai_chat_llm(
     temperature=0.1,  # 降低温度，使输出更确定性
-    max_tokens=200,    # 限制输出长度
-    top_p=0.9,         # 调整top_p参数
+    max_tokens=200,  # 限制输出长度
+    top_p=0.9,  # 调整top_p参数
 )
 
 result4 = custom_llm.invoke("请详细介绍LangChain的核心组件")

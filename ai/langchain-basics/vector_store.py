@@ -50,7 +50,7 @@ similar_docs = vector_store.similarity_search(query, k=2)
 print(f"找到的相似文档数量: {len(similar_docs)}")
 
 for i, doc in enumerate(similar_docs):
-    print(f"\n相似文档 {i+1}:")
+    print(f"\n相似文档 {i + 1}:")
     print(doc.page_content)
 
 # 6. 带分数的相似性搜索
@@ -80,6 +80,7 @@ if os.path.exists("sample_docs.txt"):
 
 # 清理向量存储目录
 import shutil
+
 if os.path.exists("faiss_index"):
     shutil.rmtree("faiss_index")
 

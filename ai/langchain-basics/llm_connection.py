@@ -28,13 +28,13 @@ def get_openai_chat_llm(model=None, temperature=0.7, **kwargs):
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("未设置OPENAI_API_KEY环境变量")
-    
+
     # 从.env中获取模型名称
     model_name = model or os.getenv("OPENAI_CHAT_MODEL", "gpt-3.5-turbo")
-    
+
     # 从.env中获取API基础URL
     base_url = os.getenv("OPENAI_API_BASE")
-    
+
     # 构建参数
     chat_kwargs = {
         "model": model_name,
@@ -42,11 +42,11 @@ def get_openai_chat_llm(model=None, temperature=0.7, **kwargs):
         "api_key": api_key,
         **kwargs
     }
-    
+
     # 如果设置了base_url，则添加到参数中
     if base_url:
         chat_kwargs["base_url"] = base_url
-    
+
     return ChatOpenAI(**chat_kwargs)
 
 
@@ -65,13 +65,13 @@ def get_openai_text_llm(model=None, temperature=0.7, **kwargs):
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("未设置OPENAI_API_KEY环境变量")
-    
+
     # 从.env中获取模型名称
     model_name = model or os.getenv("OPENAI_TEXT_MODEL", "gpt-3.5-turbo-instruct")
-    
+
     # 从.env中获取API基础URL
     base_url = os.getenv("OPENAI_API_BASE")
-    
+
     # 构建参数
     text_kwargs = {
         "model": model_name,
@@ -79,11 +79,11 @@ def get_openai_text_llm(model=None, temperature=0.7, **kwargs):
         "api_key": api_key,
         **kwargs
     }
-    
+
     # 如果设置了base_url，则添加到参数中
     if base_url:
         text_kwargs["base_url"] = base_url
-    
+
     return OpenAI(**text_kwargs)
 
 
@@ -101,10 +101,10 @@ def get_huggingface_llm(repo_id=None, **model_kwargs):
     api_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
     if not api_token:
         raise ValueError("未设置HUGGINGFACEHUB_API_TOKEN环境变量")
-    
+
     # 从.env中获取模型仓库ID
     model_repo_id = repo_id or os.getenv("HUGGINGFACE_REPO_ID", "google/flan-t5-large")
-    
+
     return HuggingFaceHub(
         repo_id=model_repo_id,
         model_kwargs=model_kwargs or {"temperature": 0.7, "max_length": 512}
@@ -119,21 +119,21 @@ def get_embeddings():
         OpenAIEmbeddings实例
     """
     from langchain.embeddings import OpenAIEmbeddings
-    
+
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("未设置OPENAI_API_KEY环境变量")
-    
+
     # 从.env中获取API基础URL
     base_url = os.getenv("OPENAI_API_BASE")
-    
+
     # 构建参数
     embeddings_kwargs = {
         "api_key": api_key
     }
-    
+
     # 如果设置了base_url，则添加到参数中
     if base_url:
         embeddings_kwargs["base_url"] = base_url
-    
+
     return OpenAIEmbeddings(**embeddings_kwargs)

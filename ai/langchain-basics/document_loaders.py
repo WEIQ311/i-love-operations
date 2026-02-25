@@ -17,7 +17,8 @@ import os
 print("===== 文本文件加载 =====")
 # 创建示例文本文件
 with open("sample.txt", "w", encoding="utf-8") as f:
-    f.write("LangChain是一个强大的LLM应用开发框架。\n它提供了丰富的工具和组件，帮助开发者快速构建LLM应用。\nLangChain的核心概念包括Chains、Agents、Tools等。")
+    f.write(
+        "LangChain是一个强大的LLM应用开发框架。\n它提供了丰富的工具和组件，帮助开发者快速构建LLM应用。\nLangChain的核心概念包括Chains、Agents、Tools等。")
 
 # 加载文本文件
 text_loader = TextLoader("sample.txt", encoding="utf-8")
@@ -70,7 +71,7 @@ text_splitter = RecursiveCharacterTextSplitter(
 chunks = text_splitter.split_documents(text_documents)
 print(f"分割后的文档块数量: {len(chunks)}")
 for i, chunk in enumerate(chunks):
-    print(f"块 {i+1}: {chunk.page_content}")
+    print(f"块 {i + 1}: {chunk.page_content}")
 print("====================")
 
 # 清理临时文件
