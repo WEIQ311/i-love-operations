@@ -5,7 +5,7 @@
 """
 
 from langchain_openai import ChatOpenAI, OpenAI
-from langchain.llms import HuggingFaceHub
+from langchain_openai import OpenAIEmbeddings
 from dotenv import load_dotenv
 import os
 
@@ -87,28 +87,28 @@ def get_openai_text_llm(model=None, temperature=0.7, **kwargs):
     return OpenAI(**text_kwargs)
 
 
-def get_huggingface_llm(repo_id=None, **model_kwargs):
-    """
-    获取HuggingFace模型实例
-    
-    Args:
-        repo_id: 模型仓库ID，默认为从.env中获取，若未设置则使用google/flan-t5-large
-        **model_kwargs: 模型参数
-    
-    Returns:
-        HuggingFaceHub实例
-    """
-    api_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
-    if not api_token:
-        raise ValueError("未设置HUGGINGFACEHUB_API_TOKEN环境变量")
+# def get_huggingface_llm(repo_id=None, **model_kwargs):
+#     """
+#     获取HuggingFace模型实例
+#     
+#     Args:
+#         repo_id: 模型仓库ID，默认为从.env中获取，若未设置则使用google/flan-t5-large
+#         **model_kwargs: 模型参数
+#     
+#     Returns:
+#         HuggingFaceHub实例
+#     """
+#     api_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+#     if not api_token:
+#         raise ValueError("未设置HUGGINGFACEHUB_API_TOKEN环境变量")
 
-    # 从.env中获取模型仓库ID
-    model_repo_id = repo_id or os.getenv("HUGGINGFACE_REPO_ID", "google/flan-t5-large")
+#     # 从.env中获取模型仓库ID
+#     model_repo_id = repo_id or os.getenv("HUGGINGFACE_REPO_ID", "google/flan-t5-large")
 
-    return HuggingFaceHub(
-        repo_id=model_repo_id,
-        model_kwargs=model_kwargs or {"temperature": 0.7, "max_length": 512}
-    )
+#     return HuggingFaceHub(
+#         repo_id=model_repo_id,
+#         model_kwargs=model_kwargs or {"temperature": 0.7, "max_length": 512}
+#     )
 
 
 def get_embeddings():
@@ -118,8 +118,6 @@ def get_embeddings():
     Returns:
         OpenAIEmbeddings实例
     """
-    from langchain.embeddings import OpenAIEmbeddings
-
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError("未设置OPENAI_API_KEY环境变量")

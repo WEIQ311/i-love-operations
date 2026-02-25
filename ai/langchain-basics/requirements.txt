@@ -6,3 +6,13 @@ requests
 beautifulsoup4
 pydantic
 pydantic-settings
+# 额外依赖（由langchain及其子包自动安装，但明确列出以确保完整性）
+tiktoken
+openai
+langchain-core
+langchain-openai
+langsmith
+langgraph
+langgraph-sdk
+langgraph-checkpoint
+langgraph-prebuilt
