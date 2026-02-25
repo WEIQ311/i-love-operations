@@ -2,20 +2,31 @@
 
 本目录包含了LangChain的基本代码示例，展示了LangChain的核心功能和使用方法。这些示例适用于使用conda环境中的algo-workspace，并支持从配置文件中灵活管理大模型连接。
 
+## 学习资源
+
+### LangChain学习指南
+
+本项目提供了详细的LangChain学习指南：
+
+- **LANGCHAIN_LEARNING_GUIDE.md** - 包含LangChain的核心概念、使用方法、最佳实践和常见问题解答，适合LangChain初学者
+
+如果您对LangChain完全不了解，建议先阅读此学习指南，然后再运行示例代码。
+
 ## 目录结构
 
 ```
 langchain-basics/
-├── requirements.txt     # 依赖包配置
-├── README.md            # 本说明文档
-├── llm_connection.py    # 大模型连接公共模块
-├── basic_chain.py       # 基本Chain示例
-├── prompt_template.py   # 提示模板示例
-├── llm_integration.py   # LLM集成示例
-├── document_loaders.py  # 文档加载器示例
-├── vector_store.py      # 向量存储示例
-├── agent_example.py     # 智能体示例
-└── .env_template        # 环境变量模板文件
+├── requirements.txt             # 依赖包配置
+├── README.md                    # 本说明文档
+├── LANGCHAIN_LEARNING_GUIDE.md  # LangChain学习指南
+├── llm_connection.py            # 大模型连接公共模块
+├── basic_chain.py               # 基本Chain示例
+├── prompt_template.py           # 提示模板示例
+├── llm_integration.py           # LLM集成示例
+├── document_loaders.py          # 文档加载器示例
+├── vector_store.py              # 向量存储示例
+├── agent_example.py             # 智能体示例
+└── .env_template                # 环境变量模板文件
 ```
 
 ## 安装依赖
