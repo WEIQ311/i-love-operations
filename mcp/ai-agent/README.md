@@ -239,7 +239,7 @@ tools = [QUERY_DATABASE_TOOL_SPEC]
 如果你希望其他机器上的 MCP Host（或自研 Agent）通过 HTTP 连接，可以这样启动：
 
 ```bash
-cd /Users/weiqiang/work/resource/ai-agent
+cd /Users/admin/work/resource/ai-agent
 conda activate algo-workspace
 
 # 默认以 HTTP 方式启动 MCP（0.0.0.0:8000）
