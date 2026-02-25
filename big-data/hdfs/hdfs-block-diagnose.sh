@@ -5,8 +5,18 @@
 # 作者：系统管理员
 # 日期：2025-02-25
 
-LOG_FILE="/var/log/hdfs-block-diagnose.log"
-REPORT_FILE="/tmp/hdfs-block-report-$(date +%Y%m%d_%H%M%S).txt"
+# 获取脚本所在目录
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+# 上一层目录
+PARENT_DIR=$(dirname "$SCRIPT_DIR")
+LOG_DIR="$PARENT_DIR/logs"
+REPORT_DIR="$PARENT_DIR/report"
+
+# 创建目录
+mkdir -p "$LOG_DIR" "$REPORT_DIR"
+
+LOG_FILE="$LOG_DIR/hdfs-block-diagnose.log"
+REPORT_FILE="$REPORT_DIR/hdfs-block-report-$(date +%Y%m%d_%H%M%S).txt"
 
 log_message() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"

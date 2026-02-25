@@ -6,7 +6,17 @@
 # 日期：2025-02-25
 # 注意：此脚本会自动移动损坏文件到/lost+found
 
-LOG_FILE="/var/log/hdfs-block-auto-repair.log"
+# 获取脚本所在目录
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+# 上一层目录
+PARENT_DIR=$(dirname "$SCRIPT_DIR")
+LOG_DIR="$PARENT_DIR/logs"
+REPORT_DIR="$PARENT_DIR/report"
+
+# 创建目录
+mkdir -p "$LOG_DIR" "$REPORT_DIR"
+
+LOG_FILE="$LOG_DIR/hdfs-block-auto-repair.log"
 
 log_message() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"

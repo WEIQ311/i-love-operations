@@ -6,8 +6,18 @@
 # 日期：2025-02-25
 # 警告：此脚本会删除损坏的文件，请谨慎使用！
 
-LOG_FILE="/var/log/hdfs-block-repair.log"
-BACKUP_DIR="/tmp/hdfs-corrupt-backup-$(date +%Y%m%d_%H%M%S)"
+# 获取脚本所在目录
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+# 上一层目录
+PARENT_DIR=$(dirname "$SCRIPT_DIR")
+LOG_DIR="$PARENT_DIR/logs"
+REPORT_DIR="$PARENT_DIR/report"
+
+# 创建目录
+mkdir -p "$LOG_DIR" "$REPORT_DIR"
+
+LOG_FILE="$LOG_DIR/hdfs-block-repair.log"
+BACKUP_DIR="$REPORT_DIR/hdfs-corrupt-backup-$(date +%Y%m%d_%H%M%S)"
 
 log_message() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
