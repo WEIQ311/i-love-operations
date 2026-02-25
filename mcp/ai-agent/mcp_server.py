@@ -23,11 +23,9 @@ from mcp.server.fastmcp import FastMCP
 
 from src_tool import query_database
 
-
 LOG_DIR = Path(__file__).resolve().parent / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / "mcp_server.log"
-
 
 logger = logging.getLogger("ai_db_agent")
 logger.setLevel(logging.INFO)
@@ -39,15 +37,14 @@ if not logger.handlers:
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-
 mcp = FastMCP("ai-db-agent", json_response=True)
 
 
 @mcp.tool()
 def query_database_tool(
-    natural_language_query: str,
-    page: Optional[int] = None,
-    page_size: Optional[int] = None,
+        natural_language_query: str,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     使用自然语言问题查询业务数据库，可返回多行记录、统计结果，支持分页。
@@ -99,5 +96,3 @@ if __name__ == "__main__":
         mcp.run(transport="streamable-http", host=host, port=port)
     else:
         mcp.run()
-
-

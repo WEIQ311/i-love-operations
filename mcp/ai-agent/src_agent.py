@@ -22,10 +22,10 @@ class DbQueryAgent:
         self.engine = create_db_engine(config.db)
 
     def ask(
-        self,
-        question: str,
-        page: Optional[int] = None,
-        page_size: Optional[int] = None,
+            self,
+            question: str,
+            page: Optional[int] = None,
+            page_size: Optional[int] = None,
     ) -> AgentResult:
         schema = get_schema_summary(self.engine)
         raw_llm_output, sql = generate_sql(self.config.llm, schema, question)
@@ -42,4 +42,3 @@ class DbQueryAgent:
 def build_default_agent() -> DbQueryAgent:
     cfg = load_config_from_env()
     return DbQueryAgent(cfg)
-

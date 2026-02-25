@@ -1,6 +1,7 @@
 # AI DB Agent（NL2SQL）
 
-使用大模型将自然语言转换为 SQL，查询 MySQL / PostgreSQL 等关系型数据库中的数据，并以表格或 JSON 形式返回结果，适合作为**大模型工具（tool）或独立 API 服务**使用。
+使用大模型将自然语言转换为 SQL，查询 MySQL / PostgreSQL 等关系型数据库中的数据，并以表格或 JSON 形式返回结果，适合作为*
+*大模型工具（tool）或独立 API 服务**使用。
 
 - **输入**：自然语言问题（中文/英文）+ 可选分页参数。
 - **中间**：自动读取数据库 schema，调用 LLM 生成只读 SQL，并做安全校验。
@@ -96,9 +97,17 @@ curl -X POST "http://127.0.0.1:8000/query" \
 {
   "question": "统计 2024 年每个月的订单数量和金额",
   "sql": "SELECT ...",
-  "columns": ["month", "order_count", "amount"],
+  "columns": [
+    "month",
+    "order_count",
+    "amount"
+  ],
   "rows": [
-    {"month": "2024-01", "order_count": 123, "amount": 4567.89}
+    {
+      "month": "2024-01",
+      "order_count": 123,
+      "amount": 4567.89
+    }
   ],
   "page": 1,
   "page_size": 50,
@@ -157,20 +166,25 @@ tools = [QUERY_DATABASE_TOOL_SPEC]
 ## 7. 常见问题（FAQ）
 
 - **Q：数据库表结构经常变化，要改代码吗？**  
-  **A：不需要。** 项目运行时会通过 SQLAlchemy 的 `inspect` 动态读取当前库的表和字段信息，并把这些 schema 描述发给大模型，所以只要连接的是最新的数据库，就能自动适配。
+  **A：不需要。** 项目运行时会通过 SQLAlchemy 的 `inspect` 动态读取当前库的表和字段信息，并把这些 schema
+  描述发给大模型，所以只要连接的是最新的数据库，就能自动适配。
 
 - **Q：统计类问题（如分组、汇总）也能处理吗？**  
-  **A：可以。** 大模型会根据自然语言问题和 schema 生成对应的 `GROUP BY / COUNT / SUM / AVG` 等 SQL，结果通过 `columns + rows` 返回，你可以直接展示或再交给大模型做二次解释。
+  **A：可以。** 大模型会根据自然语言问题和 schema 生成对应的 `GROUP BY / COUNT / SUM / AVG` 等 SQL，结果通过
+  `columns + rows` 返回，你可以直接展示或再交给大模型做二次解释。
 
 - **Q：分页是怎么做的？**  
-  **A：** 如果传入 `page` 和 `page_size`，底层会把 LLM 生成的 SQL 包一层子查询，加上 `LIMIT/OFFSET`，并多取一行判断是否还有下一页，结果通过 `page/page_size/has_more` 返回。
+  **A：** 如果传入 `page` 和 `page_size`，底层会把 LLM 生成的 SQL 包一层子查询，加上 `LIMIT/OFFSET`，并多取一行判断是否还有下一页，结果通过
+  `page/page_size/has_more` 返回。
 
 - **Q：如何只在内网调用，不暴露数据库细节？**  
-  **A：** 推荐在内网部署本项目的 API 服务（`uvicorn api:app ...`），只暴露 `/query` 这个接口给上层大模型服务，数据库连接信息只存在当前服务的 `.env`/环境变量中，对外部是不可见的。
+  **A：** 推荐在内网部署本项目的 API 服务（`uvicorn api:app ...`），只暴露 `/query` 这个接口给上层大模型服务，数据库连接信息只存在当前服务的
+  `.env`/环境变量中，对外部是不可见的。
 
 ## 8. 作为 MCP 服务使用（上架到 Cursor 等 Host）
 
-项目已经内置了一个标准的 MCP Server：`mcp_server.py`，基于官方 Python SDK（`mcp` 包），既可以本地 stdio 方式被 Cursor 拉起，也可以作为远程 HTTP MCP 服务暴露。
+项目已经内置了一个标准的 MCP Server：`mcp_server.py`，基于官方 Python SDK（`mcp` 包），既可以本地 stdio 方式被 Cursor
+拉起，也可以作为远程 HTTP MCP 服务暴露。
 
 - **工具入口**：`query_database_tool`（内部复用 `src_tool.query_database`）
 - **传输方式**：stdio（适配 Cursor、Claude Desktop 等）
@@ -184,7 +198,9 @@ tools = [QUERY_DATABASE_TOOL_SPEC]
   "mcpServers": {
     "ai-db-agent": {
       "command": "python",
-      "args": ["mcp_server.py"],
+      "args": [
+        "mcp_server.py"
+      ],
       "env": {
         "PYTHONUNBUFFERED": "1"
       }
@@ -208,7 +224,9 @@ tools = [QUERY_DATABASE_TOOL_SPEC]
   "mcpServers": {
     "ai-db-agent": {
       "command": "python",
-      "args": ["/Users/admin/work/resource/ai-agent/mcp_server.py"]
+      "args": [
+        "/Users/admin/work/resource/ai-agent/mcp_server.py"
+      ]
     }
   }
 }
@@ -236,13 +254,15 @@ export MCP_HTTP_PORT=9000
 python mcp_server.py http
 ```
 
-此时会在 `http://MCP_HTTP_HOST:MCP_HTTP_PORT/mcp` 暴露一个 HTTP MCP 端点，你可以用 MCP Inspector 或其他支持 HTTP/streamable-http 的 Host 进行连接测试。
+此时会在 `http://MCP_HTTP_HOST:MCP_HTTP_PORT/mcp` 暴露一个 HTTP MCP 端点，你可以用 MCP Inspector 或其他支持
+HTTP/streamable-http 的 Host 进行连接测试。
 
 ### 8.4 上架 / 调试 MCP Server 的推荐流程
 
 1. 安装依赖：`pip install -r requirements.txt`（包含 `mcp`）。
 2. 配置 `.env`：填好数据库和 LLM 相关变量，并确认能通过 `python main.py` 正常查询。
 3. 如需本地（stdio）方式给 Cursor 用：直接在 Cursor 打开项目并启用 `ai-db-agent`。
-4. 如需远程 HTTP MCP：在服务器上运行 `python mcp_server.py http`，再用 MCP Inspector / 远程 Host 连接 `http://host:port/mcp`。
+4. 如需远程 HTTP MCP：在服务器上运行 `python mcp_server.py http`，再用 MCP Inspector / 远程 Host 连接
+   `http://host:port/mcp`。
 
 

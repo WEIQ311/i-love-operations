@@ -6,9 +6,7 @@ import os
 
 from dotenv import load_dotenv
 
-
 load_dotenv()
-
 
 DbDriver = Literal["postgresql", "mysql"]
 
@@ -75,4 +73,3 @@ def load_config_from_env(prefix: str = "DB_") -> AgentConfig:
     max_rows = int(os.getenv("AGENT_MAX_ROWS", "200"))
 
     return AgentConfig(db=db_cfg, llm=llm_cfg, max_rows=max_rows)
-

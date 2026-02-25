@@ -12,9 +12,9 @@ from src_agent import build_default_agent
 
 
 def query_database(
-    natural_language_query: str,
-    page: Optional[int] = None,
-    page_size: Optional[int] = None,
+        natural_language_query: str,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
 ) -> Dict[str, Any]:
     """
     统一查询入口：给大模型注册的 tool 函数。
@@ -81,4 +81,3 @@ QUERY_DATABASE_TOOL_SPEC: Dict[str, Any] = {
         },
     },
 }
-
