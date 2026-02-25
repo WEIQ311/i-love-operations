@@ -1,20 +1,111 @@
+# 临时文件
 *~
 
-# temporary files which can be created if a process still has a handle open of a deleted file
+# 进程仍有句柄打开的已删除文件
 .fuse_hidden*
 
-# KDE directory preferences
+# KDE 目录首选项
 .directory
 
-# Linux trash folder which might appear on any partition or disk
+# Linux 回收站
 .Trash-*
 
-# .nfs files are created when an open file is removed but is still being accessed
+# 已删除但仍被访问的文件
 .nfs*
 
+# 日志文件
 *.log
 
-__pycache__
-monitor
+# Python 相关
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 环境变量文件
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 编辑器相关
+# Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+[._]sw[a-p]
+
+# Emacs
+*~
+*#
+/.emacs.d/
+
+# VS Code 和 IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 操作系统相关
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 构建工具相关
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Gradle
+build/
+.gradle/
+gradle-app.setting
+
+# npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 测试相关
+test-results/
+coverage/
+.coverage
+.coverage.*
+.pytest_cache/
+
+# 数据库相关
+*.db
+*.sqlite
+*.sqlite3
+db.sqlite3
+
+# 监控和临时目录
+monitor/
 .cursor/
+temp/
+tmp/
+
+# 其他
+*.swp
+*.swo
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+
