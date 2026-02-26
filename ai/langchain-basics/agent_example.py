@@ -5,8 +5,21 @@ LangChain 智能体示例
 """
 
 from langchain.agents import AgentType, initialize_agent, load_tools
-from langchain.tools import Tool
-from langchain.utilities import SerpAPIWrapper
+
+try:
+    # 旧版：Tool 从 langchain.tools 导入
+    from langchain.tools import Tool  # type: ignore
+except Exception:
+    # 新版：Tool 定义在 langchain_core.tools
+    from langchain_core.tools import Tool  # type: ignore
+
+try:
+    # 旧版：SerpAPIWrapper 在主包 utilities 里
+    from langchain.utilities import SerpAPIWrapper  # type: ignore
+except Exception:
+    # 新版：迁移到 langchain_community
+    from langchain_community.utilities import SerpAPIWrapper  # type: ignore
+
 import os
 from llm_connection import get_openai_chat_llm
 

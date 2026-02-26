@@ -9,6 +9,16 @@ from langchain_openai import OpenAIEmbeddings
 from dotenv import load_dotenv
 import os
 
+try:
+    # 新版生态：HuggingFaceHub 位于 langchain_community
+    from langchain_community.llms import HuggingFaceHub  # type: ignore
+except Exception:
+    # 旧版生态：仍然可能位于 langchain.llms
+    try:
+        from langchain.llms import HuggingFaceHub  # type: ignore
+    except Exception:
+        HuggingFaceHub = None  # 未安装相关依赖时优雅降级
+
 # 加载环境变量
 load_dotenv()
 
@@ -85,6 +95,36 @@ def get_openai_text_llm(model=None, temperature=0.7, **kwargs):
         text_kwargs["base_url"] = base_url
 
     return OpenAI(**text_kwargs)
+
+
+def get_huggingface_llm(repo_id=None, **model_kwargs):
+    """
+    获取 HuggingFace 文本模型实例。
+
+    Args:
+        repo_id: 模型仓库 ID，默认为从 .env 中获取 HUGGINGFACE_REPO_ID，
+                 未设置则使用 google/flan-t5-large
+        **model_kwargs: 模型参数（例如 temperature、max_new_tokens 等）
+
+    Returns:
+        HuggingFaceHub 实例
+    """
+    if HuggingFaceHub is None:
+        raise ImportError(
+            "当前环境未找到 HuggingFaceHub，请安装 `langchain-community` 或兼容版本的 `langchain`。"
+        )
+
+    api_token = os.getenv("HUGGINGFACEHUB_API_TOKEN")
+    if not api_token:
+        raise ValueError("未设置HUGGINGFACEHUB_API_TOKEN环境变量")
+
+    # 从.env中获取模型仓库ID
+    model_repo_id = repo_id or os.getenv("HUGGINGFACE_REPO_ID", "google/flan-t5-large")
+
+    return HuggingFaceHub(
+        repo_id=model_repo_id,
+        model_kwargs=model_kwargs or {"temperature": 0.7, "max_length": 512}
+    )
 
 
 # def get_huggingface_llm(repo_id=None, **model_kwargs):

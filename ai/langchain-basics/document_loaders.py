@@ -2,16 +2,35 @@
 """
 LangChain 文档加载器示例
 展示了如何使用LangChain加载不同类型的文档
+兼容 LangChain 旧版/新版包结构。
 """
 
-from langchain.document_loaders import (
-    TextLoader,
-    CSVLoader,
-    PyPDFLoader,
-    WebBaseLoader,
-    DirectoryLoader
-)
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+try:
+    # 旧版：加载器在 langchain.document_loaders 下
+    from langchain.document_loaders import (
+        TextLoader,
+        CSVLoader,
+        PyPDFLoader,
+        WebBaseLoader,
+        DirectoryLoader,
+    )
+except Exception:
+    # 新版：加载器迁移到 langchain_community.document_loaders
+    from langchain_community.document_loaders import (  # type: ignore
+        TextLoader,
+        CSVLoader,
+        PyPDFLoader,
+        WebBaseLoader,
+        DirectoryLoader,
+    )
+
+try:
+    # 旧版文本切分
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+except Exception:
+    # 新版文本切分
+    from langchain.text_splitters import RecursiveCharacterTextSplitter  # type: ignore
+
 import os
 
 print("===== 文本文件加载 =====")

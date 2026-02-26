@@ -4,13 +4,25 @@ LangChain 提示模板示例
 展示了如何使用LangChain的提示模板
 """
 
-from langchain.prompts import (
-    PromptTemplate,
-    ChatPromptTemplate,
-    HumanMessagePromptTemplate,
-    SystemMessagePromptTemplate,
-    AIMessagePromptTemplate
-)
+try:
+    # 旧版：提示模板在 langchain.prompts 下
+    from langchain.prompts import (  # type: ignore
+        PromptTemplate,
+        ChatPromptTemplate,
+        HumanMessagePromptTemplate,
+        SystemMessagePromptTemplate,
+        AIMessagePromptTemplate,
+    )
+except Exception:
+    # 新版：提示模板在 langchain_core.prompts 下
+    from langchain_core.prompts import (  # type: ignore
+        PromptTemplate,
+        ChatPromptTemplate,
+        HumanMessagePromptTemplate,
+        SystemMessagePromptTemplate,
+        AIMessagePromptTemplate,
+    )
+
 from llm_connection import get_openai_chat_llm
 
 # 初始化LLM

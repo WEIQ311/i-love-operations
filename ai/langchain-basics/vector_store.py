@@ -4,9 +4,23 @@ LangChain 向量存储示例
 展示了如何使用LangChain的向量存储进行相似性搜索
 """
 
-from langchain.vectorstores import FAISS
-from langchain.document_loaders import TextLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+try:
+    # 旧版：向量存储在 langchain.vectorstores 下
+    from langchain.vectorstores import FAISS  # type: ignore
+except Exception:
+    # 新版：向量存储迁移到 langchain_community.vectorstores
+    from langchain_community.vectorstores import FAISS  # type: ignore
+
+try:
+    from langchain.document_loaders import TextLoader  # type: ignore
+except Exception:
+    from langchain_community.document_loaders import TextLoader  # type: ignore
+
+try:
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
+except Exception:
+    from langchain.text_splitters import RecursiveCharacterTextSplitter  # type: ignore
+
 from llm_connection import get_embeddings
 import os
 
