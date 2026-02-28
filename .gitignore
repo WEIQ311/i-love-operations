@@ -99,6 +99,7 @@ monitor/
 .cursor/
 temp/
 tmp/
+logs/
 
 # 其他
 *.swp
