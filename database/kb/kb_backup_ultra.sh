@@ -61,7 +61,7 @@ show_help() {
   $0 -d testdb -c 7z
 
 EOF
-
+}
 
 # 解析命令行参数
 HOST="$DEFAULT_HOST"
