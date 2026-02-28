@@ -10,7 +10,7 @@ DEFAULT_HOST="localhost"
 DEFAULT_PORT="3306"
 DEFAULT_USER="root"
 DEFAULT_PASSWORD="password"
-BACKUP_DIR="./backups"
+BACKUP_DIR="./backups/"$(date +"%Y%m%d")
 DATE=$(date +"%Y%m%d_%H%M%S")
 COMPRESSION_LEVEL=9  # 默认最高压缩级别
 
