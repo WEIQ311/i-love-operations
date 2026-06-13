@@ -1,0 +1,17 @@
+# Python依赖包
+# 用于Hive到Doris数据同步工具
+
+# 数据库连接
+pymysql==1.1.1
+
+# 可选：如果需要更高级的日志处理
+# logging
+
+# 可选：如果需要更高级的配置管理
+# configparser
+
+# 可选：如果需要更高级的并行处理
+# concurrent.futures (Python 3.2+ 标准库)
+
+# 可选：如果需要更高级的错误处理
+# traceback (Python 标准库)
