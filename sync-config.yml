@@ -1,0 +1,16 @@
+# 仓库同步配置列表
+repositories:
+  - name: "i-love-operations-sync"  # 示例：同步一个主分支的项目
+    gitee:
+      # Gitee 仓库完整地址
+      repo_url: "https://gitee.com/wei311525/i-love-operations.git"
+      # 要同步的源分支
+      branch: "master"
+    github:
+      # GitHub 目标仓库名称
+      repo_name: "i-love-operations"
+      # GitHub 目标分支名称（可选，默认与 Gitee 分支相同）
+      branch: "main"
+      # 是否为私有仓库
+      private: false
+
