@@ -1,0 +1,12 @@
+# Hive到Doris同步表列表
+# 格式: Hive库名\tHive表名\tDoris库名\tDoris表名
+# 如果Doris库名和表名与Hive相同，可以省略后两列
+
+# 示例（完整格式）:
+# hive_db1	hive_table1	doris_db1	doris_table1
+
+# 示例（简化格式，Doris与Hive同名）:
+# hive_db2	hive_table2
+
+# ============================================================
+
