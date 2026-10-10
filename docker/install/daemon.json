@@ -1,0 +1,27 @@
+{
+	"data-root": "/data/docker/home",
+	"registry-mirrors": [
+		"https://hub.fast360.xyz",
+		"https://hub.rat.dev",
+		"https://hub.littlediary.cn",
+		"https://docker.kejilion.pro",
+		"https://dockerpull.cn",
+		"https://docker-0.unsee.tech",
+		"https://docker.tbedu.top",
+		"https://docker.1panelproxy.com",
+		"https://docker.melikeme.cn",
+		"https://cr.laoyou.ip-ddns.com",
+		"https://hub.firefly.store",
+		"https://docker.hlmirror.com",
+		"https://docker.m.daocloud.io",
+		"https://docker.1panel.live",
+		"https://image.cloudlayer.icu",
+		"https://docker.1ms.run"
+	],
+	"live-restore": true,
+	"log-driver": "json-file",
+	"log-opts": {
+		"max-size": "10m",
+		"max-file": "3"
+	}
+}
