@@ -1,0 +1,101 @@
+{
+  "concurrent_execution": true,
+  "database_instances": [
+    {
+      "type": "mysql",
+      "name": "mysql_prod",
+      "enabled": true,
+      "config": {
+        "host": "localhost",
+        "port": 3306,
+        "user": "root",
+        "password": "password",
+        "database": "information_schema"
+      }
+    },
+    {
+      "type": "mysql",
+      "name": "mysql_staging",
+      "enabled": true,
+      "config": {
+        "host": "localhost",
+        "port": 3307,
+        "user": "root",
+        "password": "password",
+        "database": "information_schema"
+      }
+    },
+    {
+      "type": "postgresql",
+      "name": "postgres_prod",
+      "enabled": true,
+      "config": {
+        "host": "localhost",
+        "port": 5432,
+        "user": "postgres",
+        "password": "postgres",
+        "database": "postgres"
+      }
+    },
+    {
+      "type": "dm",
+      "name": "dm_prod",
+      "enabled": true,
+      "config": {
+        "host": "localhost",
+        "port": 5236,
+        "user": "SYSDBA",
+        "password": "SYSDBA",
+        "database": "SYSTEM"
+      }
+    },
+    {
+      "type": "kb",
+      "name": "kb_prod",
+      "enabled": true,
+      "config": {
+        "host": "localhost",
+        "port": 54321,
+        "user": "system",
+        "password": "manager",
+        "database": "test"
+      }
+    },
+    {
+      "type": "oracle",
+      "name": "oracle_prod",
+      "enabled": true,
+      "config": {
+        "host": "localhost",
+        "port": 1521,
+        "user": "system",
+        "password": "oracle",
+        "sid": "ORCL"
+      }
+    },
+    {
+      "type": "mssql",
+      "name": "mssql_prod",
+      "enabled": true,
+      "config": {
+        "host": "localhost",
+        "port": 1433,
+        "user": "sa",
+        "password": "Password123",
+        "database": "master"
+      }
+    },
+    {
+      "type": "mongodb",
+      "name": "mongodb_prod",
+      "enabled": true,
+      "config": {
+        "host": "localhost",
+        "port": 27017,
+        "user": "",
+        "password": "",
+        "database": "admin"
+      }
+    }
+  ]
+}
